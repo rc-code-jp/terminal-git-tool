@@ -46,15 +46,19 @@ fn main() -> Result<()> {
     let mut click_areas = ClickAreas::new();
 
     loop {
-        // Adjust scroll before rendering
-        let visible_height = terminal.size()?.height.saturating_sub(4) as usize;
-        app.adjust_scroll(visible_height);
+        if app.dirty {
+            let visible_height = terminal.size()?.height.saturating_sub(4) as usize;
+            app.adjust_scroll(visible_height);
 
-        terminal.draw(|frame| {
-            ui::render(frame, &app, &mut click_areas);
-        })?;
+            terminal.draw(|frame| {
+                ui::render(frame, &app, &mut click_areas);
+            })?;
+
+            app.dirty = false;
+        }
 
         if let Some(ev) = event::poll_event(Duration::from_millis(250))? {
+            let visible_height = terminal.size()?.height.saturating_sub(4) as usize;
             if let Some(action) = event::map_event(&ev, &app.mode, &click_areas) {
                 match action {
                     Action::Quit => break,
@@ -68,19 +72,21 @@ fn main() -> Result<()> {
                     Action::CancelCommit => app.cancel_commit(),
                     Action::Push => app.push(),
                     Action::Refresh => app.refresh(),
-                    Action::CommitInputChar(c) => app.commit_message.push(c),
+                    Action::CommitInputChar(c) => {
+                        app.commit_message.push(c);
+                        app.dirty = true;
+                    }
                     Action::CommitInputBackspace => {
                         app.commit_message.pop();
+                        app.dirty = true;
                     }
+                    Action::Resize => app.dirty = true,
                     Action::ScrollUp => app.scroll_up(),
                     Action::ScrollDown => app.scroll_down(visible_height),
                     Action::SelectIndex(idx) => {
                         if idx < app.repo.files.len() {
-                            if app.selected_index == idx {
-                                app.toggle_stage_selected();
-                            } else {
-                                app.selected_index = idx;
-                            }
+                            app.selected_index = idx;
+                            app.toggle_stage_selected();
                         }
                     }
                 }

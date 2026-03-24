@@ -222,7 +222,7 @@ pub fn commit(message: &str) -> Result<String> {
 
 pub fn push() -> Result<String> {
     let output = Command::new("git")
-        .args(["push"])
+        .args(["push", "origin", "HEAD"])
         .output()
         .context("Failed to run git push")?;
     if !output.status.success() {

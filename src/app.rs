@@ -14,6 +14,7 @@ pub struct App {
     pub commit_message: String,
     pub status_message: String,
     pub should_quit: bool,
+    pub dirty: bool,
 }
 
 impl App {
@@ -26,6 +27,7 @@ impl App {
             commit_message: String::new(),
             status_message: String::new(),
             should_quit: false,
+            dirty: true,
         }
     }
 
@@ -46,10 +48,12 @@ impl App {
             commit_message: String::new(),
             status_message: String::new(),
             should_quit: false,
+            dirty: true,
         }
     }
 
     pub fn refresh(&mut self) {
+        self.dirty = true;
         let old_selected = self.selected_index;
         match git::get_repo_state() {
             Ok(repo) => {
@@ -71,12 +75,14 @@ impl App {
     pub fn move_up(&mut self) {
         if self.selected_index > 0 {
             self.selected_index -= 1;
+            self.dirty = true;
         }
     }
 
     pub fn move_down(&mut self) {
         if !self.repo.files.is_empty() && self.selected_index < self.repo.files.len() - 1 {
             self.selected_index += 1;
+            self.dirty = true;
         }
     }
 
@@ -118,16 +124,19 @@ impl App {
     pub fn enter_commit_mode(&mut self) {
         if self.repo.staged_count == 0 {
             self.status_message = String::from("Nothing staged to commit");
+            self.dirty = true;
             return;
         }
         self.mode = Mode::CommitInput;
         self.commit_message.clear();
         self.status_message.clear();
+        self.dirty = true;
     }
 
     pub fn confirm_commit(&mut self) {
         if self.commit_message.trim().is_empty() {
             self.status_message = String::from("Empty commit message");
+            self.dirty = true;
             return;
         }
         match git::commit(&self.commit_message) {
@@ -137,7 +146,10 @@ impl App {
                 self.commit_message.clear();
                 self.refresh();
             }
-            Err(e) => self.status_message = format!("Error: {}", e),
+            Err(e) => {
+                self.status_message = format!("Error: {}", e);
+                self.dirty = true;
+            }
         }
     }
 
@@ -145,22 +157,28 @@ impl App {
         self.mode = Mode::Normal;
         self.commit_message.clear();
         self.status_message.clear();
+        self.dirty = true;
     }
 
     pub fn push(&mut self) {
         self.status_message = String::from("Pushing...");
+        self.dirty = true;
         match git::push() {
             Ok(msg) => {
                 self.status_message = msg;
                 self.refresh();
             }
-            Err(e) => self.status_message = format!("Error: {}", e),
+            Err(e) => {
+                self.status_message = format!("Error: {}", e);
+                self.dirty = true;
+            }
         }
     }
 
     pub fn scroll_up(&mut self) {
         if self.list_offset > 0 {
             self.list_offset -= 1;
+            self.dirty = true;
         }
     }
 
@@ -168,6 +186,7 @@ impl App {
         let max_offset = self.repo.files.len().saturating_sub(visible_height);
         if self.list_offset < max_offset {
             self.list_offset += 1;
+            self.dirty = true;
         }
     }
 

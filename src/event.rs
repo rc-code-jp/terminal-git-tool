@@ -22,6 +22,7 @@ pub enum Action {
     SelectIndex(usize),
     ScrollUp,
     ScrollDown,
+    Resize,
 }
 
 pub struct ClickAreas {
@@ -122,6 +123,7 @@ fn map_normal_event(event: &Event, click_areas: &ClickAreas) -> Option<Action> {
             MouseEventKind::ScrollDown => Some(Action::ScrollDown),
             _ => None,
         },
+        Event::Resize(_, _) => Some(Action::Resize),
         _ => None,
     }
 }
@@ -165,6 +167,7 @@ fn map_commit_event(event: &Event, click_areas: &ClickAreas) -> Option<Action> {
             MouseEventKind::ScrollDown => Some(Action::ScrollDown),
             _ => None,
         },
+        Event::Resize(_, _) => Some(Action::Resize),
         _ => None,
     }
 }
