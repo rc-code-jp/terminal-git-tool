@@ -53,3 +53,11 @@ git リポジトリ内で起動する。
 | `q` / `Esc` | quit |
 
 マウスクリック・スクロール対応。
+
+## Contributing
+
+コントリビュート歓迎です！詳しくは [CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。
+
+## License
+
+[MIT](LICENSE)
