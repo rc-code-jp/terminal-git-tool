@@ -1,7 +1,7 @@
-use git_pocket::ui::truncate_path;
-use git_pocket::app::{App, Mode};
-use git_pocket::event::ClickAreas;
-use git_pocket::git::{FileStatus, GitFile, RepoState};
+use pocogit::ui::truncate_path;
+use pocogit::app::{App, Mode};
+use pocogit::event::ClickAreas;
+use pocogit::git::{FileStatus, GitFile, RepoState};
 use ratatui::{Terminal, backend::TestBackend, buffer::Buffer};
 
 fn make_repo(files: Vec<(&str, FileStatus)>) -> RepoState {
@@ -96,7 +96,7 @@ fn render_shows_branch_name() {
 
     terminal
         .draw(|frame| {
-            git_pocket::ui::render(frame, &app, &mut click_areas);
+            pocogit::ui::render(frame, &app, &mut click_areas);
         })
         .unwrap();
 
@@ -124,7 +124,7 @@ fn render_shows_file_with_status_symbol() {
 
     terminal
         .draw(|frame| {
-            git_pocket::ui::render(frame, &app, &mut click_areas);
+            pocogit::ui::render(frame, &app, &mut click_areas);
         })
         .unwrap();
 
@@ -154,7 +154,7 @@ fn render_shows_selected_cursor() {
 
     terminal
         .draw(|frame| {
-            git_pocket::ui::render(frame, &app, &mut click_areas);
+            pocogit::ui::render(frame, &app, &mut click_areas);
         })
         .unwrap();
 
@@ -177,7 +177,7 @@ fn render_no_changes_message() {
 
     terminal
         .draw(|frame| {
-            git_pocket::ui::render(frame, &app, &mut click_areas);
+            pocogit::ui::render(frame, &app, &mut click_areas);
         })
         .unwrap();
 
@@ -204,7 +204,7 @@ fn render_commit_input_mode() {
 
     terminal
         .draw(|frame| {
-            git_pocket::ui::render(frame, &app, &mut click_areas);
+            pocogit::ui::render(frame, &app, &mut click_areas);
         })
         .unwrap();
 
@@ -228,7 +228,7 @@ fn render_click_areas_populated() {
 
     terminal
         .draw(|frame| {
-            git_pocket::ui::render(frame, &app, &mut click_areas);
+            pocogit::ui::render(frame, &app, &mut click_areas);
         })
         .unwrap();
 
@@ -267,7 +267,7 @@ fn render_header_counts() {
 
     terminal
         .draw(|frame| {
-            git_pocket::ui::render(frame, &app, &mut click_areas);
+            pocogit::ui::render(frame, &app, &mut click_areas);
         })
         .unwrap();
 
@@ -292,7 +292,7 @@ fn render_narrow_width_buttons() {
 
     terminal
         .draw(|frame| {
-            git_pocket::ui::render(frame, &app, &mut click_areas);
+            pocogit::ui::render(frame, &app, &mut click_areas);
         })
         .unwrap();
 

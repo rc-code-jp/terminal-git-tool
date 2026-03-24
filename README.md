@@ -1,4 +1,4 @@
-# git-pocket
+# pocogit
 
 狭いターミナルペイン向けの軽量 git TUI。status / stage / commit / push を素早く回せる。
 
@@ -11,7 +11,7 @@ cargo install --path .
 ## Usage
 
 ```
-git-pocket
+pocogit
 ```
 
 git リポジトリ内で起動する。

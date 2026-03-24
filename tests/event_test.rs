@@ -4,8 +4,8 @@ use crossterm::event::{
 };
 use ratatui::layout::Rect;
 
-use git_pocket::app::Mode;
-use git_pocket::event::{map_event, Action, ButtonAction, ClickAreas};
+use pocogit::app::Mode;
+use pocogit::event::{map_event, Action, ButtonAction, ClickAreas};
 
 fn key_event(code: KeyCode) -> Event {
     Event::Key(KeyEvent {

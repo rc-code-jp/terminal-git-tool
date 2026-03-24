@@ -1,4 +1,4 @@
-use git_pocket::git::{parse_branch, parse_porcelain_output, FileStatus};
+use pocogit::git::{parse_branch, parse_porcelain_output, FileStatus};
 
 // =============================================================================
 // parse_branch

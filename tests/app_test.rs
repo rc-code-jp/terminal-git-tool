@@ -1,5 +1,5 @@
-use git_pocket::app::{App, Mode};
-use git_pocket::git::{FileStatus, GitFile, RepoState};
+use pocogit::app::{App, Mode};
+use pocogit::git::{FileStatus, GitFile, RepoState};
 
 fn make_repo(files: Vec<(&str, FileStatus)>) -> RepoState {
     let git_files: Vec<GitFile> = files

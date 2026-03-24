@@ -79,10 +79,10 @@ fn integration_parse_untracked_files() {
     repo.write_file("b.txt", "world");
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 2);
-    assert!(state.files.iter().all(|f| f.status == git_pocket::git::FileStatus::Untracked));
+    assert!(state.files.iter().all(|f| f.status == pocogit::git::FileStatus::Untracked));
     assert_eq!(state.untracked_count, 2);
 }
 
@@ -93,10 +93,10 @@ fn integration_parse_staged_files() {
     repo.git(&["add", "a.txt"]);
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 1);
-    assert_eq!(state.files[0].status, git_pocket::git::FileStatus::Staged);
+    assert_eq!(state.files[0].status, pocogit::git::FileStatus::Staged);
     assert_eq!(state.staged_count, 1);
 }
 
@@ -109,10 +109,10 @@ fn integration_parse_modified_files() {
     repo.write_file("a.txt", "hello modified");
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 1);
-    assert_eq!(state.files[0].status, git_pocket::git::FileStatus::Modified);
+    assert_eq!(state.files[0].status, pocogit::git::FileStatus::Modified);
     assert_eq!(state.unstaged_count, 1);
 }
 
@@ -127,10 +127,10 @@ fn integration_parse_both_status() {
     repo.write_file("a.txt", "v3"); // modify again without staging
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 1);
-    assert_eq!(state.files[0].status, git_pocket::git::FileStatus::Both);
+    assert_eq!(state.files[0].status, pocogit::git::FileStatus::Both);
     assert_eq!(state.staged_count, 1);
     assert_eq!(state.unstaged_count, 1);
 }
@@ -154,7 +154,7 @@ fn integration_parse_mixed_statuses() {
     repo.write_file("untracked.txt", "untracked");
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 3);
     assert_eq!(state.staged_count, 1);
@@ -167,7 +167,7 @@ fn integration_parse_empty_repo() {
     let repo = TempRepo::new("empty");
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 0);
     assert_eq!(state.staged_count, 0);
@@ -184,11 +184,11 @@ fn integration_parse_deleted_file() {
     fs::remove_file(repo.path().join("a.txt")).unwrap();
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 1);
     // Deleted but not staged = Modified (unstaged change)
-    assert_eq!(state.files[0].status, git_pocket::git::FileStatus::Modified);
+    assert_eq!(state.files[0].status, pocogit::git::FileStatus::Modified);
 }
 
 #[test]
@@ -200,10 +200,10 @@ fn integration_parse_staged_delete() {
     repo.git(&["rm", "a.txt"]);
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 1);
-    assert_eq!(state.files[0].status, git_pocket::git::FileStatus::Staged);
+    assert_eq!(state.files[0].status, pocogit::git::FileStatus::Staged);
 }
 
 #[test]
@@ -214,7 +214,7 @@ fn integration_parse_subdirectory_files() {
 
     // Use -uall to show individual untracked files instead of directories
     let porcelain = repo.git(&["status", "--porcelain=v1", "-b", "-uall"]);
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
 
     assert_eq!(state.files.len(), 2);
     let paths: Vec<&str> = state.files.iter().map(|f| f.path.as_str()).collect();
@@ -240,8 +240,8 @@ fn integration_stage_and_unstage_file() {
     assert!(output.status.success());
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
-    assert_eq!(state.files[0].status, git_pocket::git::FileStatus::Staged);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
+    assert_eq!(state.files[0].status, pocogit::git::FileStatus::Staged);
 
     // Unstage (using reset HEAD will fail on first commit, use rm --cached)
     let output = Command::new("git")
@@ -252,8 +252,8 @@ fn integration_stage_and_unstage_file() {
     assert!(output.status.success());
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
-    assert_eq!(state.files[0].status, git_pocket::git::FileStatus::Untracked);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
+    assert_eq!(state.files[0].status, pocogit::git::FileStatus::Untracked);
 }
 
 #[test]
@@ -270,7 +270,7 @@ fn integration_commit_flow() {
     assert!(output.status.success());
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
     assert_eq!(state.files.len(), 0, "No files after commit");
 }
 
@@ -289,9 +289,9 @@ fn integration_stage_all() {
     assert!(output.status.success());
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
     assert!(
-        state.files.iter().all(|f| f.status == git_pocket::git::FileStatus::Staged),
+        state.files.iter().all(|f| f.status == pocogit::git::FileStatus::Staged),
         "All files should be staged"
     );
     assert_eq!(state.staged_count, 3);
@@ -309,7 +309,7 @@ fn integration_branch_name_default() {
     repo.git(&["commit", "-m", "init"]);
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
     // Default branch could be "main" or "master" depending on git config
     assert!(
         !state.branch.is_empty(),
@@ -326,6 +326,6 @@ fn integration_branch_name_feature() {
     repo.git(&["checkout", "-b", "feature/test-branch"]);
 
     let porcelain = repo.git_status_porcelain();
-    let state = git_pocket::git::parse_porcelain_output(&porcelain, 0);
+    let state = pocogit::git::parse_porcelain_output(&porcelain, 0);
     assert_eq!(state.branch, "feature/test-branch");
 }

@@ -1,5 +1,6 @@
 [package]
-name = "git-pocket"
+name = "pocogit"
+description = "A compact git TUI for narrow terminal panes"
 version = "0.1.0"
 edition = "2021"
 
