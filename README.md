@@ -4,8 +4,30 @@
 
 ## Install
 
+### Homebrew (macOS)
+
+```
+brew install rc-code-jp/tap/pocogit
+```
+
+### Cargo
+
 ```
 cargo install --path .
+```
+
+## Update
+
+### Homebrew
+
+```
+brew upgrade pocogit
+```
+
+### Cargo
+
+```
+cargo install --path . --force
 ```
 
 ## Usage
