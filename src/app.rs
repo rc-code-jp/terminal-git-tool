@@ -4,6 +4,7 @@ use crate::git::{self, FileStatus, RepoState};
 pub enum Mode {
     Normal,
     CommitInput,
+    Help,
 }
 
 pub struct App {
@@ -189,6 +190,16 @@ impl App {
                 self.dirty = true;
             }
         }
+    }
+
+    pub fn show_help(&mut self) {
+        self.mode = Mode::Help;
+        self.dirty = true;
+    }
+
+    pub fn close_help(&mut self) {
+        self.mode = Mode::Normal;
+        self.dirty = true;
     }
 
     pub fn scroll_up(&mut self) {

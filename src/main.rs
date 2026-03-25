@@ -105,6 +105,8 @@ fn main() -> Result<()> {
                     Action::CancelCommit => app.cancel_commit(),
                     Action::Pull => app.pull(),
                     Action::Push => app.push(),
+                    Action::ShowHelp => app.show_help(),
+                    Action::CloseHelp => app.close_help(),
                     Action::Refresh => {
                         app.refresh();
                         last_refresh = Instant::now();

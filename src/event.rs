@@ -18,6 +18,8 @@ pub enum Action {
     Pull,
     Push,
     Refresh,
+    ShowHelp,
+    CloseHelp,
     CommitInputChar(char),
     CommitInputBackspace,
     SelectIndex(usize),
@@ -66,6 +68,7 @@ pub fn map_event(
     match mode {
         Mode::Normal => map_normal_event(event, click_areas),
         Mode::CommitInput => map_commit_event(event, click_areas),
+        Mode::Help => map_help_event(event),
     }
 }
 
@@ -88,6 +91,7 @@ fn map_normal_event(event: &Event, click_areas: &ClickAreas) -> Option<Action> {
                 KeyCode::Char('p') => Some(Action::Push),
                 KeyCode::Char('P') => Some(Action::Pull),
                 KeyCode::Char('r') => Some(Action::Refresh),
+                KeyCode::Char('?') => Some(Action::ShowHelp),
                 _ => None,
             }
         }
@@ -127,6 +131,26 @@ fn map_normal_event(event: &Event, click_areas: &ClickAreas) -> Option<Action> {
             MouseEventKind::ScrollDown => Some(Action::ScrollDown),
             _ => None,
         },
+        Event::Resize(_, _) => Some(Action::Resize),
+        _ => None,
+    }
+}
+
+fn map_help_event(event: &Event) -> Option<Action> {
+    match event {
+        Event::Key(KeyEvent {
+            code, modifiers, ..
+        }) => {
+            if *modifiers == KeyModifiers::CONTROL && *code == KeyCode::Char('c') {
+                return Some(Action::Quit);
+            }
+            match code {
+                KeyCode::Char('q') | KeyCode::Esc | KeyCode::Char('?') => {
+                    Some(Action::CloseHelp)
+                }
+                _ => None,
+            }
+        }
         Event::Resize(_, _) => Some(Action::Resize),
         _ => None,
     }
