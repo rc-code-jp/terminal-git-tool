@@ -16,10 +16,7 @@ fn parse_branch_with_upstream() {
 
 #[test]
 fn parse_branch_with_upstream_and_ahead() {
-    assert_eq!(
-        parse_branch("## main...origin/main [ahead 2]"),
-        "main"
-    );
+    assert_eq!(parse_branch("## main...origin/main [ahead 2]"), "main");
 }
 
 #[test]
@@ -146,6 +143,16 @@ A  added.rs
 }
 
 #[test]
+fn porcelain_branch_header_with_ahead_and_behind_counts() {
+    let output = "\
+## main...origin/main [ahead 2, behind 3]
+";
+    let state = parse_porcelain_output(output, 2, 3);
+    assert_eq!(state.unpushed_count, 2);
+    assert_eq!(state.unpulled_count, 3);
+}
+
+#[test]
 fn porcelain_empty_output() {
     let output = "## main\n";
     let state = parse_porcelain_output(output, 0, 0);
@@ -201,7 +208,10 @@ fn branch_list_single_branch() {
 fn branch_list_multiple_branches() {
     let output = "  develop\n  feature/login\n* main\n  staging\n";
     let (branches, current) = parse_branch_list(output);
-    assert_eq!(branches, vec!["develop", "feature/login", "main", "staging"]);
+    assert_eq!(
+        branches,
+        vec!["develop", "feature/login", "main", "staging"]
+    );
     assert_eq!(current, 2);
 }
 
