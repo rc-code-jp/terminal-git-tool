@@ -92,6 +92,18 @@ pub fn map_event(event: &Event, mode: &Mode, click_areas: &ClickAreas) -> Option
     }
 }
 
+pub fn map_busy_event(event: &Event) -> Option<Action> {
+    match event {
+        Event::Key(KeyEvent {
+            code: KeyCode::Char('c'),
+            modifiers,
+            ..
+        }) if *modifiers == KeyModifiers::CONTROL => Some(Action::Quit),
+        Event::Resize(_, _) => Some(Action::Resize),
+        _ => None,
+    }
+}
+
 fn map_normal_event(event: &Event, click_areas: &ClickAreas) -> Option<Action> {
     match event {
         Event::Key(KeyEvent {

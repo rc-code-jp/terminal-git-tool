@@ -9,6 +9,54 @@ pub enum Mode {
     BranchCreate,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum BusyAction {
+    StageAll,
+    UnstageAll,
+    Commit,
+    Pull,
+    Push,
+    BranchSwitch,
+    BranchCreate,
+}
+
+impl BusyAction {
+    pub fn status_text(&self) -> &'static str {
+        match self {
+            BusyAction::StageAll => "Staging all...",
+            BusyAction::UnstageAll => "Unstaging all...",
+            BusyAction::Commit => "Committing...",
+            BusyAction::Pull => "Pulling...",
+            BusyAction::Push => "Pushing...",
+            BusyAction::BranchSwitch => "Switching branch...",
+            BusyAction::BranchCreate => "Creating branch...",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BusyState {
+    pub action: BusyAction,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum AppCommand {
+    StageAll,
+    UnstageAll,
+    Commit { message: String },
+    Pull,
+    Push,
+    CheckoutBranch { name: String },
+    CreateBranch { name: String },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CommandRequest {
+    pub busy_action: BusyAction,
+    pub command: AppCommand,
+}
+
 pub struct App {
     pub mode: Mode,
     pub repo: RepoState,
@@ -23,6 +71,7 @@ pub struct App {
     pub branch_selected: usize,
     pub branch_scroll: usize,
     pub branch_name_input: String,
+    pub busy: Option<BusyState>,
 }
 
 impl App {
@@ -43,6 +92,7 @@ impl App {
             branch_selected: 0,
             branch_scroll: 0,
             branch_name_input: String::new(),
+            busy: None,
         }
     }
 
@@ -70,7 +120,48 @@ impl App {
             branch_selected: 0,
             branch_scroll: 0,
             branch_name_input: String::new(),
+            busy: None,
         }
+    }
+
+    pub fn is_busy(&self) -> bool {
+        self.busy.is_some()
+    }
+
+    pub fn begin_busy(&mut self, action: BusyAction) {
+        let message = action.status_text().to_string();
+        self.status_message = message.clone();
+        self.busy = Some(BusyState { action, message });
+        self.dirty = true;
+    }
+
+    pub fn finish_busy_success(&mut self, action: BusyAction, message: String) {
+        self.busy = None;
+        self.status_message = message;
+        match action {
+            BusyAction::Commit => {
+                self.mode = Mode::Normal;
+                self.commit_message.clear();
+            }
+            BusyAction::BranchSwitch => {
+                self.mode = Mode::Normal;
+                self.branches.clear();
+            }
+            BusyAction::BranchCreate => {
+                self.mode = Mode::Normal;
+                self.branch_name_input.clear();
+                self.branches.clear();
+            }
+            BusyAction::StageAll | BusyAction::UnstageAll | BusyAction::Pull | BusyAction::Push => {
+            }
+        }
+        self.refresh();
+    }
+
+    pub fn finish_busy_error(&mut self, _action: BusyAction, error: String) {
+        self.busy = None;
+        self.status_message = format!("Error: {}", error);
+        self.dirty = true;
     }
 
     pub fn refresh(&mut self) {
@@ -122,24 +213,18 @@ impl App {
         }
     }
 
-    pub fn stage_all(&mut self) {
-        match git::stage_all() {
-            Ok(()) => {
-                self.status_message = String::from("Staged all");
-                self.refresh();
-            }
-            Err(e) => self.status_message = format!("Error: {}", e),
-        }
+    pub fn stage_all(&mut self) -> Option<CommandRequest> {
+        Some(CommandRequest {
+            busy_action: BusyAction::StageAll,
+            command: AppCommand::StageAll,
+        })
     }
 
-    pub fn unstage_all(&mut self) {
-        match git::unstage_all() {
-            Ok(()) => {
-                self.status_message = String::from("Unstaged all");
-                self.refresh();
-            }
-            Err(e) => self.status_message = format!("Error: {}", e),
-        }
+    pub fn unstage_all(&mut self) -> Option<CommandRequest> {
+        Some(CommandRequest {
+            busy_action: BusyAction::UnstageAll,
+            command: AppCommand::UnstageAll,
+        })
     }
 
     pub fn enter_commit_mode(&mut self) {
@@ -154,24 +239,18 @@ impl App {
         self.dirty = true;
     }
 
-    pub fn confirm_commit(&mut self) {
+    pub fn confirm_commit(&mut self) -> Option<CommandRequest> {
         if self.commit_message.trim().is_empty() {
             self.status_message = String::from("Empty commit message");
             self.dirty = true;
-            return;
+            return None;
         }
-        match git::commit(&self.commit_message) {
-            Ok(msg) => {
-                self.status_message = msg;
-                self.mode = Mode::Normal;
-                self.commit_message.clear();
-                self.refresh();
-            }
-            Err(e) => {
-                self.status_message = format!("Error: {}", e);
-                self.dirty = true;
-            }
-        }
+        Some(CommandRequest {
+            busy_action: BusyAction::Commit,
+            command: AppCommand::Commit {
+                message: self.commit_message.clone(),
+            },
+        })
     }
 
     pub fn cancel_commit(&mut self) {
@@ -181,34 +260,18 @@ impl App {
         self.dirty = true;
     }
 
-    pub fn pull(&mut self) {
-        self.status_message = String::from("Pulling...");
-        self.dirty = true;
-        match git::pull() {
-            Ok(msg) => {
-                self.status_message = msg;
-                self.refresh();
-            }
-            Err(e) => {
-                self.status_message = format!("Error: {}", e);
-                self.dirty = true;
-            }
-        }
+    pub fn pull(&mut self) -> Option<CommandRequest> {
+        Some(CommandRequest {
+            busy_action: BusyAction::Pull,
+            command: AppCommand::Pull,
+        })
     }
 
-    pub fn push(&mut self) {
-        self.status_message = String::from("Pushing...");
-        self.dirty = true;
-        match git::push() {
-            Ok(msg) => {
-                self.status_message = msg;
-                self.refresh();
-            }
-            Err(e) => {
-                self.status_message = format!("Error: {}", e);
-                self.dirty = true;
-            }
-        }
+    pub fn push(&mut self) -> Option<CommandRequest> {
+        Some(CommandRequest {
+            busy_action: BusyAction::Push,
+            command: AppCommand::Push,
+        })
     }
 
     pub fn show_help(&mut self) {
@@ -314,29 +377,22 @@ impl App {
         }
     }
 
-    pub fn confirm_branch_switch(&mut self) {
+    pub fn confirm_branch_switch(&mut self) -> Option<CommandRequest> {
         if let Some(name) = self.branches.get(self.branch_selected) {
             if *name == self.repo.branch {
                 self.status_message = format!("Already on '{}'", name);
                 self.mode = Mode::Normal;
                 self.branches.clear();
                 self.dirty = true;
-                return;
+                return None;
             }
             let name = name.clone();
-            match git::checkout_branch(&name) {
-                Ok(msg) => {
-                    self.status_message = msg;
-                    self.mode = Mode::Normal;
-                    self.branches.clear();
-                    self.refresh();
-                }
-                Err(e) => {
-                    self.status_message = format!("Error: {}", e);
-                    self.dirty = true;
-                }
-            }
+            return Some(CommandRequest {
+                busy_action: BusyAction::BranchSwitch,
+                command: AppCommand::CheckoutBranch { name },
+            });
         }
+        None
     }
 
     pub fn enter_branch_create(&mut self) {
@@ -346,25 +402,18 @@ impl App {
         self.dirty = true;
     }
 
-    pub fn confirm_branch_create(&mut self) {
+    pub fn confirm_branch_create(&mut self) -> Option<CommandRequest> {
         if self.branch_name_input.trim().is_empty() {
             self.status_message = String::from("Empty branch name");
             self.dirty = true;
-            return;
+            return None;
         }
-        match git::create_and_checkout_branch(self.branch_name_input.trim()) {
-            Ok(msg) => {
-                self.status_message = msg;
-                self.mode = Mode::Normal;
-                self.branch_name_input.clear();
-                self.branches.clear();
-                self.refresh();
-            }
-            Err(e) => {
-                self.status_message = format!("Error: {}", e);
-                self.dirty = true;
-            }
-        }
+        Some(CommandRequest {
+            busy_action: BusyAction::BranchCreate,
+            command: AppCommand::CreateBranch {
+                name: self.branch_name_input.trim().to_string(),
+            },
+        })
     }
 
     pub fn cancel_branch_create(&mut self) {

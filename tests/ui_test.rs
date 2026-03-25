@@ -1,4 +1,4 @@
-use pocogit::app::{App, Mode};
+use pocogit::app::{App, BusyAction, Mode};
 use pocogit::event::ClickAreas;
 use pocogit::git::{FileStatus, GitFile, RepoState};
 use pocogit::ui::truncate_path;
@@ -334,6 +334,53 @@ fn render_narrow_width_buttons() {
         "Narrow width should show abbreviated buttons, got: '{}'",
         footer
     );
+}
+
+#[test]
+fn render_busy_footer_shows_loading_label() {
+    let repo = make_repo(vec![("a.rs", FileStatus::Modified)]);
+    let mut app = App::with_repo(repo);
+    app.begin_busy(BusyAction::Push);
+    let mut click_areas = ClickAreas::new();
+
+    let backend = TestBackend::new(80, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|frame| {
+            pocogit::ui::render(frame, &app, &mut click_areas);
+        })
+        .unwrap();
+
+    let buf = terminal.backend().buffer().clone();
+    let footer = buffer_line_to_string(&buf, 8);
+    let status = buffer_line_to_string(&buf, 9);
+    assert!(footer.contains("[Pushing...]"), "footer: '{}'", footer);
+    assert!(status.contains("Pushing..."), "status: '{}'", status);
+}
+
+#[test]
+fn render_busy_commit_footer_shows_loading_label() {
+    let repo = make_repo(vec![("a.rs", FileStatus::Staged)]);
+    let mut app = App::with_repo(repo);
+    app.mode = Mode::CommitInput;
+    app.begin_busy(BusyAction::Commit);
+    let mut click_areas = ClickAreas::new();
+
+    let backend = TestBackend::new(80, 12);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|frame| {
+            pocogit::ui::render(frame, &app, &mut click_areas);
+        })
+        .unwrap();
+
+    let buf = terminal.backend().buffer().clone();
+    let footer = buffer_line_to_string(&buf, 10);
+    let status = buffer_line_to_string(&buf, 11);
+    assert!(footer.contains("[Committing...]"), "footer: '{}'", footer);
+    assert!(status.contains("Committing..."), "status: '{}'", status);
 }
 
 // =============================================================================

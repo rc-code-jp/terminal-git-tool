@@ -6,6 +6,7 @@ mod ui;
 use std::io;
 use std::path::Path;
 use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -18,8 +19,13 @@ use crossterm::{
 use notify::{RecursiveMode, Watcher};
 use ratatui::{backend::CrosstermBackend, Terminal};
 
-use app::App;
-use event::{Action, ClickAreas};
+use app::{App, AppCommand, BusyAction, CommandRequest};
+use event::{map_busy_event, Action, ClickAreas};
+
+struct WorkerResponse {
+    action: BusyAction,
+    result: Result<String, String>,
+}
 
 struct TerminalGuard;
 
@@ -27,6 +33,54 @@ impl Drop for TerminalGuard {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
         let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);
+    }
+}
+
+fn run_app_command(command: AppCommand) -> Result<String, String> {
+    match command {
+        AppCommand::StageAll => git::stage_all()
+            .map(|()| String::from("Staged all"))
+            .map_err(|e| e.to_string()),
+        AppCommand::UnstageAll => git::unstage_all()
+            .map(|()| String::from("Unstaged all"))
+            .map_err(|e| e.to_string()),
+        AppCommand::Commit { message } => git::commit(&message).map_err(|e| e.to_string()),
+        AppCommand::Pull => git::pull().map_err(|e| e.to_string()),
+        AppCommand::Push => git::push().map_err(|e| e.to_string()),
+        AppCommand::CheckoutBranch { name } => {
+            git::checkout_branch(&name).map_err(|e| e.to_string())
+        }
+        AppCommand::CreateBranch { name } => {
+            git::create_and_checkout_branch(&name).map_err(|e| e.to_string())
+        }
+    }
+}
+
+fn spawn_worker(command_rx: Receiver<CommandRequest>, result_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        while let Ok(request) = command_rx.recv() {
+            let result = run_app_command(request.command);
+            let _ = result_tx.send(WorkerResponse {
+                action: request.busy_action,
+                result,
+            });
+        }
+    });
+}
+
+fn enqueue_command(
+    app: &mut App,
+    command_tx: &Sender<CommandRequest>,
+    request: Option<CommandRequest>,
+) {
+    let Some(request) = request else {
+        return;
+    };
+
+    let busy_action = request.busy_action.clone();
+    app.begin_busy(busy_action.clone());
+    if let Err(err) = command_tx.send(request) {
+        app.finish_busy_error(busy_action, err.to_string());
     }
 }
 
@@ -48,6 +102,9 @@ fn main() -> Result<()> {
 
     let mut app = App::new();
     let mut click_areas = ClickAreas::new();
+    let (command_tx, command_rx) = mpsc::channel();
+    let (result_tx, result_rx) = mpsc::channel();
+    spawn_worker(command_rx, result_tx);
 
     // Setup file system watcher
     let (fs_tx, fs_rx) = mpsc::channel();
@@ -75,8 +132,19 @@ fn main() -> Result<()> {
             fs_changed = true;
         }
 
+        while let Ok(response) = result_rx.try_recv() {
+            match response.result {
+                Ok(message) => {
+                    app.finish_busy_success(response.action, message);
+                    last_refresh = Instant::now();
+                    fs_changed = false;
+                }
+                Err(error) => app.finish_busy_error(response.action, error),
+            }
+        }
+
         // Debounced refresh on file system change
-        if fs_changed && last_refresh.elapsed() >= debounce_interval {
+        if !app.is_busy() && fs_changed && last_refresh.elapsed() >= debounce_interval {
             app.refresh();
             last_refresh = Instant::now();
             fs_changed = false;
@@ -96,19 +164,40 @@ fn main() -> Result<()> {
 
         if let Some(ev) = event::poll_event(Duration::from_millis(250))? {
             let visible_height = terminal.size()?.height.saturating_sub(4) as usize;
-            if let Some(action) = event::map_event(&ev, &app.mode, &click_areas) {
+            let action = if app.is_busy() {
+                map_busy_event(&ev)
+            } else {
+                event::map_event(&ev, &app.mode, &click_areas)
+            };
+
+            if let Some(action) = action {
                 match action {
                     Action::Quit => break,
                     Action::MoveUp => app.move_up(),
                     Action::MoveDown => app.move_down(),
                     Action::ToggleStage => app.toggle_stage_selected(),
-                    Action::StageAll => app.stage_all(),
-                    Action::UnstageAll => app.unstage_all(),
+                    Action::StageAll => {
+                        let request = app.stage_all();
+                        enqueue_command(&mut app, &command_tx, request);
+                    }
+                    Action::UnstageAll => {
+                        let request = app.unstage_all();
+                        enqueue_command(&mut app, &command_tx, request);
+                    }
                     Action::EnterCommitMode => app.enter_commit_mode(),
-                    Action::ConfirmCommit => app.confirm_commit(),
+                    Action::ConfirmCommit => {
+                        let request = app.confirm_commit();
+                        enqueue_command(&mut app, &command_tx, request);
+                    }
                     Action::CancelCommit => app.cancel_commit(),
-                    Action::Pull => app.pull(),
-                    Action::Push => app.push(),
+                    Action::Pull => {
+                        let request = app.pull();
+                        enqueue_command(&mut app, &command_tx, request);
+                    }
+                    Action::Push => {
+                        let request = app.push();
+                        enqueue_command(&mut app, &command_tx, request);
+                    }
                     Action::ShowHelp => app.show_help(),
                     Action::CloseHelp => app.close_help(),
                     Action::Refresh => {
@@ -129,9 +218,15 @@ fn main() -> Result<()> {
                     Action::CloseBranchList => app.close_branch_list(),
                     Action::BranchListMoveUp => app.branch_list_move_up(),
                     Action::BranchListMoveDown => app.branch_list_move_down(),
-                    Action::BranchListSelect => app.confirm_branch_switch(),
+                    Action::BranchListSelect => {
+                        let request = app.confirm_branch_switch();
+                        enqueue_command(&mut app, &command_tx, request);
+                    }
                     Action::EnterBranchCreate => app.enter_branch_create(),
-                    Action::ConfirmBranchCreate => app.confirm_branch_create(),
+                    Action::ConfirmBranchCreate => {
+                        let request = app.confirm_branch_create();
+                        enqueue_command(&mut app, &command_tx, request);
+                    }
                     Action::CancelBranchCreate => app.cancel_branch_create(),
                     Action::BranchInputChar(c) => {
                         app.branch_name_input.push(c);
@@ -144,7 +239,8 @@ fn main() -> Result<()> {
                     Action::BranchSelectIndex(idx) => {
                         if idx < app.branches.len() {
                             app.branch_selected = idx;
-                            app.confirm_branch_switch();
+                            let request = app.confirm_branch_switch();
+                            enqueue_command(&mut app, &command_tx, request);
                         }
                     }
                     Action::ScrollUp => {

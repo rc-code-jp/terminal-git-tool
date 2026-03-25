@@ -1,4 +1,4 @@
-use pocogit::app::{App, Mode};
+use pocogit::app::{App, AppCommand, BusyAction, Mode};
 use pocogit::git::{FileStatus, GitFile, RepoState};
 
 fn make_repo(files: Vec<(&str, FileStatus)>) -> RepoState {
@@ -432,6 +432,68 @@ fn confirm_branch_switch_already_on_current() {
     app.confirm_branch_switch();
     assert_eq!(app.mode, Mode::Normal);
     assert!(app.status_message.contains("Already on"));
+}
+
+#[test]
+fn stage_all_returns_command_request() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    let request = app.stage_all().expect("stage all request");
+    assert_eq!(request.busy_action, BusyAction::StageAll);
+    assert_eq!(request.command, AppCommand::StageAll);
+}
+
+#[test]
+fn confirm_commit_returns_command_request() {
+    let repo = make_repo(vec![("a.rs", FileStatus::Staged)]);
+    let mut app = App::with_repo(repo);
+    app.enter_commit_mode();
+    app.commit_message = "feat: test".into();
+
+    let request = app.confirm_commit().expect("commit request");
+    assert_eq!(request.busy_action, BusyAction::Commit);
+    assert_eq!(
+        request.command,
+        AppCommand::Commit {
+            message: "feat: test".into()
+        }
+    );
+}
+
+#[test]
+fn begin_busy_sets_status_message() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.begin_busy(BusyAction::Push);
+    assert!(app.is_busy());
+    assert_eq!(app.status_message, "Pushing...");
+}
+
+#[test]
+fn finish_busy_success_clears_commit_mode() {
+    let repo = make_repo(vec![("a.rs", FileStatus::Staged)]);
+    let mut app = App::with_repo(repo);
+    app.mode = Mode::CommitInput;
+    app.commit_message = "feat: test".into();
+    app.begin_busy(BusyAction::Commit);
+
+    app.finish_busy_success(BusyAction::Commit, "Committed".into());
+    assert!(!app.is_busy());
+    assert_eq!(app.mode, Mode::Normal);
+    assert!(app.commit_message.is_empty());
+    assert_eq!(app.status_message, "Committed");
+}
+
+#[test]
+fn finish_busy_error_keeps_branch_create_mode() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.mode = Mode::BranchCreate;
+    app.branch_name_input = "feature/test".into();
+    app.begin_busy(BusyAction::BranchCreate);
+
+    app.finish_busy_error(BusyAction::BranchCreate, "failed".into());
+    assert!(!app.is_busy());
+    assert_eq!(app.mode, Mode::BranchCreate);
+    assert_eq!(app.branch_name_input, "feature/test");
+    assert_eq!(app.status_message, "Error: failed");
 }
 
 #[test]

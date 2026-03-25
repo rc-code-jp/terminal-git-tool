@@ -5,7 +5,7 @@ use crossterm::event::{
 use ratatui::layout::Rect;
 
 use pocogit::app::Mode;
-use pocogit::event::{map_event, Action, BranchRow, ButtonAction, ClickAreas};
+use pocogit::event::{map_busy_event, map_event, Action, BranchRow, ButtonAction, ClickAreas};
 
 fn key_event(code: KeyCode) -> Event {
     Event::Key(KeyEvent {
@@ -680,4 +680,28 @@ fn branch_create_cancel_button_click() {
         map_event(&ev, &Mode::BranchCreate, &areas),
         Some(Action::CancelBranchCreate)
     );
+}
+
+#[test]
+fn busy_mode_ctrl_c_quits() {
+    let ev = key_event_with_mod(KeyCode::Char('c'), KeyModifiers::CONTROL);
+    assert_eq!(map_busy_event(&ev), Some(Action::Quit));
+}
+
+#[test]
+fn busy_mode_resize_allowed() {
+    let ev = Event::Resize(80, 24);
+    assert_eq!(map_busy_event(&ev), Some(Action::Resize));
+}
+
+#[test]
+fn busy_mode_regular_key_is_ignored() {
+    let ev = key_event(KeyCode::Char('p'));
+    assert_eq!(map_busy_event(&ev), None);
+}
+
+#[test]
+fn busy_mode_mouse_click_is_ignored() {
+    let ev = mouse_click(2, 2);
+    assert_eq!(map_busy_event(&ev), None);
 }

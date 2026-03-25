@@ -6,7 +6,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Mode};
+use crate::app::{App, BusyAction, Mode};
 use crate::event::{ButtonAction, ClickAreas};
 use crate::git::FileStatus;
 
@@ -42,11 +42,11 @@ pub fn render(frame: &mut Frame, app: &App, click_areas: &mut ClickAreas) {
         }
         Mode::BranchList => {
             render_branch_list(frame, app, chunks[1], click_areas);
-            render_footer_branch_list(frame, chunks[2], click_areas);
+            render_footer_branch_list(frame, app, chunks[2], click_areas);
         }
         Mode::BranchCreate => {
             render_branch_create(frame, app, chunks[1]);
-            render_footer_branch_create(frame, chunks[2], click_areas);
+            render_footer_branch_create(frame, app, chunks[2], click_areas);
         }
     }
 }
@@ -191,12 +191,13 @@ fn render_footer_normal(
         (" [SA] ", " [C] ", " [Pl] ", " [P] ")
     };
 
-    let btn_style = Style::default().fg(Color::White).bg(Color::DarkGray);
+    let btn_style = button_style(app.is_busy(), false);
 
     let mut spans = Vec::new();
     let mut x_offset = area.x + 1;
 
     // Stage All button
+    let stage_all_text = busy_button_text(app, BusyAction::StageAll, stage_all_text);
     let sa_len = stage_all_text.len() as u16;
     spans.push(Span::styled(stage_all_text, btn_style));
     click_areas.buttons.push((
@@ -209,6 +210,7 @@ fn render_footer_normal(
     x_offset += 1;
 
     // Commit button
+    let commit_text = busy_button_text(app, BusyAction::Commit, commit_text);
     let c_len = commit_text.len() as u16;
     spans.push(Span::styled(commit_text, btn_style));
     click_areas
@@ -220,6 +222,7 @@ fn render_footer_normal(
     x_offset += 1;
 
     // Push button
+    let push_text = busy_button_text(app, BusyAction::Push, push_text);
     let p_len = push_text.len() as u16;
     spans.push(Span::styled(push_text, btn_style));
     click_areas
@@ -231,6 +234,7 @@ fn render_footer_normal(
     x_offset += 1;
 
     // Pull button
+    let pull_text = busy_button_text(app, BusyAction::Pull, pull_text);
     let pl_len = pull_text.len() as u16;
     spans.push(Span::styled(pull_text, btn_style));
     click_areas
@@ -241,11 +245,7 @@ fn render_footer_normal(
     frame.render_widget(buttons_line, button_area);
 
     // Status message
-    if !app.status_message.is_empty() {
-        let status = Paragraph::new(format!("  {}", app.status_message))
-            .style(Style::default().fg(Color::Cyan));
-        frame.render_widget(status, status_area);
-    }
+    render_status_line(frame, status_area, &app.status_message, app.is_busy());
 }
 
 fn render_commit_input(frame: &mut Frame, app: &App, area: Rect) {
@@ -270,7 +270,7 @@ fn render_commit_input(frame: &mut Frame, app: &App, area: Rect) {
 
 fn render_footer_commit(
     frame: &mut Frame,
-    _app: &App,
+    app: &App,
     area: Rect,
     _width: usize,
     click_areas: &mut ClickAreas,
@@ -278,9 +278,9 @@ fn render_footer_commit(
     let button_area = Rect::new(area.x, area.y, area.width, 1);
     let hint_area = Rect::new(area.x, area.y + 1, area.width, 1);
 
-    let btn_style = Style::default().fg(Color::White).bg(Color::DarkGray);
+    let btn_style = button_style(app.is_busy(), false);
 
-    let commit_text = " [Commit] ";
+    let commit_text = busy_button_text(app, BusyAction::Commit, " [Commit] ");
     let cancel_text = " [Cancel] ";
     let c_len = commit_text.len() as u16;
     let ca_len = cancel_text.len() as u16;
@@ -288,10 +288,7 @@ fn render_footer_commit(
     let mut x_offset = area.x + 1;
 
     let spans = vec![
-        Span::styled(
-            commit_text,
-            Style::default().fg(Color::Black).bg(Color::Green),
-        ),
+        Span::styled(commit_text, button_style(app.is_busy(), true)),
         Span::raw(" "),
         Span::styled(cancel_text, btn_style),
     ];
@@ -309,9 +306,13 @@ fn render_footer_commit(
     let buttons_line = Paragraph::new(Line::from(spans));
     frame.render_widget(buttons_line, button_area);
 
-    let hint =
-        Paragraph::new("  Enter: commit  Esc: cancel").style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(hint, hint_area);
+    render_hint_or_status(
+        frame,
+        hint_area,
+        "  Enter: commit  Esc: cancel",
+        &app.status_message,
+        app.is_busy(),
+    );
 }
 
 pub const HELP_LINE_COUNT: usize = 14;
@@ -441,12 +442,17 @@ fn render_branch_list(frame: &mut Frame, app: &App, area: Rect, click_areas: &mu
     frame.render_widget(list, area);
 }
 
-fn render_footer_branch_list(frame: &mut Frame, area: Rect, click_areas: &mut ClickAreas) {
+fn render_footer_branch_list(
+    frame: &mut Frame,
+    app: &App,
+    area: Rect,
+    click_areas: &mut ClickAreas,
+) {
     let button_area = Rect::new(area.x, area.y, area.width, 1);
     let hint_area = Rect::new(area.x, area.y + 1, area.width, 1);
 
-    let btn_style = Style::default().fg(Color::White).bg(Color::DarkGray);
-    let new_text = " [New] ";
+    let btn_style = button_style(app.is_busy(), false);
+    let new_text = busy_button_text(app, BusyAction::BranchCreate, " [New] ");
     let new_len = new_text.len() as u16;
     let x_offset = area.x + 1;
 
@@ -459,9 +465,13 @@ fn render_footer_branch_list(frame: &mut Frame, area: Rect, click_areas: &mut Cl
     let buttons_line = Paragraph::new(Line::from(spans));
     frame.render_widget(buttons_line, button_area);
 
-    let hint = Paragraph::new("  Enter: switch  n: new branch  Esc: close")
-        .style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(hint, hint_area);
+    render_hint_or_status(
+        frame,
+        hint_area,
+        "  Enter: switch  n: new branch  Esc: close",
+        &app.status_message,
+        app.is_busy(),
+    );
 }
 
 fn render_branch_create(frame: &mut Frame, app: &App, area: Rect) {
@@ -484,13 +494,18 @@ fn render_branch_create(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(input, chunks[2]);
 }
 
-fn render_footer_branch_create(frame: &mut Frame, area: Rect, click_areas: &mut ClickAreas) {
+fn render_footer_branch_create(
+    frame: &mut Frame,
+    app: &App,
+    area: Rect,
+    click_areas: &mut ClickAreas,
+) {
     let button_area = Rect::new(area.x, area.y, area.width, 1);
     let hint_area = Rect::new(area.x, area.y + 1, area.width, 1);
 
-    let btn_style = Style::default().fg(Color::White).bg(Color::DarkGray);
+    let btn_style = button_style(app.is_busy(), false);
 
-    let create_text = " [Create] ";
+    let create_text = busy_button_text(app, BusyAction::BranchCreate, " [Create] ");
     let cancel_text = " [Cancel] ";
     let cr_len = create_text.len() as u16;
     let ca_len = cancel_text.len() as u16;
@@ -498,10 +513,7 @@ fn render_footer_branch_create(frame: &mut Frame, area: Rect, click_areas: &mut 
     let mut x_offset = area.x + 1;
 
     let spans = vec![
-        Span::styled(
-            create_text,
-            Style::default().fg(Color::Black).bg(Color::Green),
-        ),
+        Span::styled(create_text, button_style(app.is_busy(), true)),
         Span::raw(" "),
         Span::styled(cancel_text, btn_style),
     ];
@@ -519,9 +531,58 @@ fn render_footer_branch_create(frame: &mut Frame, area: Rect, click_areas: &mut 
     let buttons_line = Paragraph::new(Line::from(spans));
     frame.render_widget(buttons_line, button_area);
 
-    let hint =
-        Paragraph::new("  Enter: create  Esc: cancel").style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(hint, hint_area);
+    render_hint_or_status(
+        frame,
+        hint_area,
+        "  Enter: create  Esc: cancel",
+        &app.status_message,
+        app.is_busy(),
+    );
+}
+
+fn button_style(is_busy: bool, is_primary: bool) -> Style {
+    if is_busy {
+        Style::default().fg(Color::DarkGray).bg(Color::Black)
+    } else if is_primary {
+        Style::default().fg(Color::Black).bg(Color::Green)
+    } else {
+        Style::default().fg(Color::White).bg(Color::DarkGray)
+    }
+}
+
+fn busy_button_text<'a>(app: &'a App, action: BusyAction, default: &'a str) -> &'a str {
+    if let Some(busy) = &app.busy {
+        if busy.action == action {
+            return match action {
+                BusyAction::StageAll => " [Staging...] ",
+                BusyAction::UnstageAll => " [Unstaging...] ",
+                BusyAction::Commit => " [Committing...] ",
+                BusyAction::Pull => " [Pulling...] ",
+                BusyAction::Push => " [Pushing...] ",
+                BusyAction::BranchSwitch => " [Switching...] ",
+                BusyAction::BranchCreate => " [Creating...] ",
+            };
+        }
+    }
+    default
+}
+
+fn render_status_line(frame: &mut Frame, area: Rect, message: &str, is_busy: bool) {
+    if message.is_empty() {
+        return;
+    }
+    let color = if is_busy { Color::Yellow } else { Color::Cyan };
+    let status = Paragraph::new(format!("  {}", message)).style(Style::default().fg(color));
+    frame.render_widget(status, area);
+}
+
+fn render_hint_or_status(frame: &mut Frame, area: Rect, hint: &str, status: &str, is_busy: bool) {
+    if status.is_empty() {
+        let hint = Paragraph::new(hint).style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(hint, area);
+    } else {
+        render_status_line(frame, area, status, is_busy);
+    }
 }
 
 pub fn truncate_path(path: &str, max_width: usize) -> String {
