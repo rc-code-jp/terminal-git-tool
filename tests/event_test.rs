@@ -5,7 +5,7 @@ use crossterm::event::{
 use ratatui::layout::Rect;
 
 use pocogit::app::Mode;
-use pocogit::event::{map_event, Action, ButtonAction, ClickAreas};
+use pocogit::event::{map_event, Action, BranchRow, ButtonAction, ClickAreas};
 
 fn key_event(code: KeyCode) -> Event {
     Event::Key(KeyEvent {
@@ -424,5 +424,266 @@ fn mouse_scroll_down_commit_mode() {
     assert_eq!(
         map_event(&ev, &Mode::CommitInput, &areas),
         Some(Action::ScrollDown)
+    );
+}
+
+// =============================================================================
+// BranchList mode
+// =============================================================================
+
+#[test]
+fn branch_list_q_closes() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Char('q'));
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::CloseBranchList)
+    );
+}
+
+#[test]
+fn branch_list_esc_closes() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Esc);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::CloseBranchList)
+    );
+}
+
+#[test]
+fn branch_list_j_moves_down() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Char('j'));
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::BranchListMoveDown)
+    );
+}
+
+#[test]
+fn branch_list_k_moves_up() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Char('k'));
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::BranchListMoveUp)
+    );
+}
+
+#[test]
+fn branch_list_enter_selects() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Enter);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::BranchListSelect)
+    );
+}
+
+#[test]
+fn branch_list_n_creates() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Char('n'));
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::EnterBranchCreate)
+    );
+}
+
+#[test]
+fn branch_list_ctrl_c_quits() {
+    let areas = empty_click_areas();
+    let ev = key_event_with_mod(KeyCode::Char('c'), KeyModifiers::CONTROL);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::Quit)
+    );
+}
+
+#[test]
+fn normal_b_shows_branch_list() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Char('b'));
+    assert_eq!(
+        map_event(&ev, &Mode::Normal, &areas),
+        Some(Action::ShowBranchList)
+    );
+}
+
+// =============================================================================
+// BranchCreate mode
+// =============================================================================
+
+#[test]
+fn branch_create_enter_confirms() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Enter);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchCreate, &areas),
+        Some(Action::ConfirmBranchCreate)
+    );
+}
+
+#[test]
+fn branch_create_esc_cancels() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Esc);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchCreate, &areas),
+        Some(Action::CancelBranchCreate)
+    );
+}
+
+#[test]
+fn branch_create_ctrl_c_cancels() {
+    let areas = empty_click_areas();
+    let ev = key_event_with_mod(KeyCode::Char('c'), KeyModifiers::CONTROL);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchCreate, &areas),
+        Some(Action::CancelBranchCreate)
+    );
+}
+
+#[test]
+fn branch_create_char_input() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Char('f'));
+    assert_eq!(
+        map_event(&ev, &Mode::BranchCreate, &areas),
+        Some(Action::BranchInputChar('f'))
+    );
+}
+
+#[test]
+fn branch_create_backspace() {
+    let areas = empty_click_areas();
+    let ev = key_event(KeyCode::Backspace);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchCreate, &areas),
+        Some(Action::BranchInputBackspace)
+    );
+}
+
+// =============================================================================
+// BranchList mouse
+// =============================================================================
+
+#[test]
+fn branch_list_mouse_click_selects_row() {
+    let mut areas = ClickAreas::new();
+    areas.branch_rows.push(BranchRow {
+        rect: Rect::new(0, 2, 40, 1),
+        index: 0,
+    });
+    areas.branch_rows.push(BranchRow {
+        rect: Rect::new(0, 3, 40, 1),
+        index: 1,
+    });
+    let ev = mouse_click(5, 3);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::BranchSelectIndex(1))
+    );
+}
+
+#[test]
+fn branch_list_mouse_click_outside_returns_none() {
+    let mut areas = ClickAreas::new();
+    areas.branch_rows.push(BranchRow {
+        rect: Rect::new(0, 2, 40, 1),
+        index: 0,
+    });
+    let ev = mouse_click(5, 10);
+    assert_eq!(map_event(&ev, &Mode::BranchList, &areas), None);
+}
+
+#[test]
+fn branch_list_mouse_scroll() {
+    let areas = empty_click_areas();
+    let ev_up = mouse_scroll_up(10, 5);
+    assert_eq!(
+        map_event(&ev_up, &Mode::BranchList, &areas),
+        Some(Action::ScrollUp)
+    );
+    let ev_down = mouse_scroll_down(10, 5);
+    assert_eq!(
+        map_event(&ev_down, &Mode::BranchList, &areas),
+        Some(Action::ScrollDown)
+    );
+}
+
+// =============================================================================
+// Header branch name click
+// =============================================================================
+
+#[test]
+fn header_branch_click_shows_branch_list() {
+    let mut areas = ClickAreas::new();
+    // Simulate branch name at (2, 0) with width 4 ("main")
+    areas.buttons.push((
+        Rect::new(2, 0, 4, 1),
+        ButtonAction::ShowBranchList,
+    ));
+    let ev = mouse_click(3, 0);
+    assert_eq!(
+        map_event(&ev, &Mode::Normal, &areas),
+        Some(Action::ShowBranchList)
+    );
+}
+
+#[test]
+fn header_plus_button_enters_branch_create() {
+    let mut areas = ClickAreas::new();
+    areas.buttons.push((
+        Rect::new(20, 0, 4, 1),
+        ButtonAction::EnterBranchCreate,
+    ));
+    let ev = mouse_click(21, 0);
+    assert_eq!(
+        map_event(&ev, &Mode::Normal, &areas),
+        Some(Action::EnterBranchCreate)
+    );
+}
+
+#[test]
+fn branch_list_new_button_click() {
+    let mut areas = ClickAreas::new();
+    areas.buttons.push((
+        Rect::new(1, 20, 7, 1),
+        ButtonAction::EnterBranchCreate,
+    ));
+    let ev = mouse_click(3, 20);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchList, &areas),
+        Some(Action::EnterBranchCreate)
+    );
+}
+
+#[test]
+fn branch_create_create_button_click() {
+    let mut areas = ClickAreas::new();
+    areas.buttons.push((
+        Rect::new(1, 20, 10, 1),
+        ButtonAction::ConfirmBranchCreate,
+    ));
+    let ev = mouse_click(5, 20);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchCreate, &areas),
+        Some(Action::ConfirmBranchCreate)
+    );
+}
+
+#[test]
+fn branch_create_cancel_button_click() {
+    let mut areas = ClickAreas::new();
+    areas.buttons.push((
+        Rect::new(12, 20, 10, 1),
+        ButtonAction::CancelBranchCreate,
+    ));
+    let ev = mouse_click(15, 20);
+    assert_eq!(
+        map_event(&ev, &Mode::BranchCreate, &areas),
+        Some(Action::CancelBranchCreate)
     );
 }

@@ -13,6 +13,7 @@ use crate::git::FileStatus;
 pub fn render(frame: &mut Frame, app: &App, click_areas: &mut ClickAreas) {
     click_areas.file_rows.clear();
     click_areas.buttons.clear();
+    click_areas.branch_rows.clear();
 
     let area = frame.area();
     let width = area.width as usize;
@@ -24,7 +25,7 @@ pub fn render(frame: &mut Frame, app: &App, click_areas: &mut ClickAreas) {
     ])
     .split(area);
 
-    render_header(frame, app, chunks[0], width);
+    render_header(frame, app, chunks[0], width, click_areas);
 
     match app.mode {
         Mode::Normal => {
@@ -39,10 +40,18 @@ pub fn render(frame: &mut Frame, app: &App, click_areas: &mut ClickAreas) {
             render_help(frame, chunks[1], app.help_scroll);
             render_footer_help(frame, chunks[2]);
         }
+        Mode::BranchList => {
+            render_branch_list(frame, app, chunks[1], click_areas);
+            render_footer_branch_list(frame, chunks[2], click_areas);
+        }
+        Mode::BranchCreate => {
+            render_branch_create(frame, app, chunks[1]);
+            render_footer_branch_create(frame, chunks[2], click_areas);
+        }
     }
 }
 
-fn render_header(frame: &mut Frame, app: &App, area: Rect, width: usize) {
+fn render_header(frame: &mut Frame, app: &App, area: Rect, width: usize, click_areas: &mut ClickAreas) {
     let branch = &app.repo.branch;
     let s = app.repo.staged_count;
     let m = app.repo.unstaged_count;
@@ -79,10 +88,33 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect, width: usize) {
         parts
     };
 
-    let header = Paragraph::new(Line::from(vec![Span::styled(
-        header_text,
-        Style::default().add_modifier(Modifier::BOLD),
-    )]))
+    // Register [+] button click area at the start
+    let plus_text = " [+]";
+    let plus_x = area.x;
+    let plus_width = plus_text.len() as u16;
+    click_areas.buttons.push((
+        Rect::new(plus_x, area.y, plus_width, 1),
+        ButtonAction::EnterBranchCreate,
+    ));
+
+    // Register branch name click area (after "[+]" + "  " prefix in header_text)
+    let branch_x = area.x + plus_width + 2; // "[+]" then "  " then branch name
+    let branch_width = branch.len() as u16;
+    click_areas.buttons.push((
+        Rect::new(branch_x, area.y, branch_width, 1),
+        ButtonAction::ShowBranchList,
+    ));
+
+    let header = Paragraph::new(Line::from(vec![
+        Span::styled(
+            plus_text,
+            Style::default().fg(Color::DarkGray),
+        ),
+        Span::styled(
+            header_text,
+            Style::default().add_modifier(Modifier::BOLD),
+        ),
+    ]))
     .block(Block::default().borders(Borders::BOTTOM));
 
     frame.render_widget(header, area);
@@ -286,7 +318,7 @@ fn render_footer_commit(
     frame.render_widget(hint, hint_area);
 }
 
-pub const HELP_LINE_COUNT: usize = 13;
+pub const HELP_LINE_COUNT: usize = 14;
 
 fn render_help(frame: &mut Frame, area: Rect, scroll: usize) {
     let help_lines = vec![
@@ -328,6 +360,10 @@ fn render_help(frame: &mut Frame, area: Rect, scroll: usize) {
             Span::raw("Pull"),
         ]),
         Line::from(vec![
+            Span::styled("  b    ", Style::default().fg(Color::Yellow)),
+            Span::raw("Branches"),
+        ]),
+        Line::from(vec![
             Span::styled("  r    ", Style::default().fg(Color::Yellow)),
             Span::raw("Refresh"),
         ]),
@@ -349,6 +385,145 @@ fn render_footer_help(frame: &mut Frame, area: Rect) {
     let hint = Paragraph::new("  Press q, Esc, or ? to close")
         .style(Style::default().fg(Color::DarkGray));
     frame.render_widget(hint, area);
+}
+
+fn render_branch_list(frame: &mut Frame, app: &App, area: Rect, click_areas: &mut ClickAreas) {
+    let visible_height = area.height as usize;
+
+    if app.branches.is_empty() {
+        let msg = Paragraph::new("  No branches found");
+        frame.render_widget(msg, area);
+        return;
+    }
+
+    let mut lines = Vec::new();
+    let start = app.branch_scroll;
+    let end = (start + visible_height).min(app.branches.len());
+
+    for i in start..end {
+        let branch = &app.branches[i];
+        let is_selected = i == app.branch_selected;
+        let is_current = *branch == app.repo.branch;
+
+        let cursor = if is_selected { " > " } else { "   " };
+        let marker = if is_current { "* " } else { "  " };
+
+        let style = if is_selected {
+            Style::default().add_modifier(Modifier::REVERSED)
+        } else {
+            Style::default()
+        };
+
+        let name_style = if is_current {
+            if is_selected {
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::REVERSED)
+            } else {
+                Style::default().fg(Color::Green)
+            }
+        } else {
+            style
+        };
+
+        let line = Line::from(vec![
+            Span::styled(cursor, style),
+            Span::styled(marker, Style::default().fg(Color::Green)),
+            Span::styled(branch.clone(), name_style),
+        ]);
+        lines.push(line);
+
+        // Register click area
+        let row_y = area.y + (i - start) as u16;
+        click_areas.branch_rows.push(crate::event::BranchRow {
+            rect: Rect::new(area.x, row_y, area.width, 1),
+            index: i,
+        });
+    }
+
+    let list = Paragraph::new(lines);
+    frame.render_widget(list, area);
+}
+
+fn render_footer_branch_list(frame: &mut Frame, area: Rect, click_areas: &mut ClickAreas) {
+    let button_area = Rect::new(area.x, area.y, area.width, 1);
+    let hint_area = Rect::new(area.x, area.y + 1, area.width, 1);
+
+    let btn_style = Style::default().fg(Color::White).bg(Color::DarkGray);
+    let new_text = " [New] ";
+    let new_len = new_text.len() as u16;
+    let x_offset = area.x + 1;
+
+    let spans = vec![Span::styled(new_text, btn_style)];
+    click_areas.buttons.push((
+        Rect::new(x_offset, area.y, new_len, 1),
+        ButtonAction::EnterBranchCreate,
+    ));
+
+    let buttons_line = Paragraph::new(Line::from(spans));
+    frame.render_widget(buttons_line, button_area);
+
+    let hint = Paragraph::new("  Enter: switch  n: new branch  Esc: close")
+        .style(Style::default().fg(Color::DarkGray));
+    frame.render_widget(hint, hint_area);
+}
+
+fn render_branch_create(frame: &mut Frame, app: &App, area: Rect) {
+    let chunks = Layout::vertical([
+        Constraint::Length(2),
+        Constraint::Length(1),
+        Constraint::Length(1),
+        Constraint::Min(0),
+    ])
+    .split(area);
+
+    let title = Paragraph::new("  NEW BRANCH")
+        .style(Style::default().add_modifier(Modifier::BOLD));
+    frame.render_widget(title, chunks[0]);
+
+    let label = Paragraph::new("  name:");
+    frame.render_widget(label, chunks[1]);
+
+    let input = Paragraph::new(format!("  > {}_", app.branch_name_input))
+        .style(Style::default().fg(Color::Yellow));
+    frame.render_widget(input, chunks[2]);
+}
+
+fn render_footer_branch_create(frame: &mut Frame, area: Rect, click_areas: &mut ClickAreas) {
+    let button_area = Rect::new(area.x, area.y, area.width, 1);
+    let hint_area = Rect::new(area.x, area.y + 1, area.width, 1);
+
+    let btn_style = Style::default().fg(Color::White).bg(Color::DarkGray);
+
+    let create_text = " [Create] ";
+    let cancel_text = " [Cancel] ";
+    let cr_len = create_text.len() as u16;
+    let ca_len = cancel_text.len() as u16;
+
+    let mut x_offset = area.x + 1;
+
+    let spans = vec![
+        Span::styled(create_text, Style::default().fg(Color::Black).bg(Color::Green)),
+        Span::raw(" "),
+        Span::styled(cancel_text, btn_style),
+    ];
+
+    click_areas.buttons.push((
+        Rect::new(x_offset, area.y, cr_len, 1),
+        ButtonAction::ConfirmBranchCreate,
+    ));
+    x_offset += cr_len + 1;
+    click_areas.buttons.push((
+        Rect::new(x_offset, area.y, ca_len, 1),
+        ButtonAction::CancelBranchCreate,
+    ));
+
+    let buttons_line = Paragraph::new(Line::from(spans));
+    frame.render_widget(buttons_line, button_area);
+
+    let hint = Paragraph::new("  Enter: create  Esc: cancel")
+        .style(Style::default().fg(Color::DarkGray));
+    frame.render_widget(hint, hint_area);
 }
 
 pub fn truncate_path(path: &str, max_width: usize) -> String {

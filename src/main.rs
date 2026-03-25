@@ -82,6 +82,7 @@ fn main() -> Result<()> {
         if app.dirty {
             let visible_height = terminal.size()?.height.saturating_sub(4) as usize;
             app.adjust_scroll(visible_height);
+            app.adjust_branch_scroll(visible_height);
 
             terminal.draw(|frame| {
                 ui::render(frame, &app, &mut click_areas);
@@ -121,9 +122,33 @@ fn main() -> Result<()> {
                         app.dirty = true;
                     }
                     Action::Resize => app.dirty = true,
+                    Action::ShowBranchList => app.show_branch_list(),
+                    Action::CloseBranchList => app.close_branch_list(),
+                    Action::BranchListMoveUp => app.branch_list_move_up(),
+                    Action::BranchListMoveDown => app.branch_list_move_down(),
+                    Action::BranchListSelect => app.confirm_branch_switch(),
+                    Action::EnterBranchCreate => app.enter_branch_create(),
+                    Action::ConfirmBranchCreate => app.confirm_branch_create(),
+                    Action::CancelBranchCreate => app.cancel_branch_create(),
+                    Action::BranchInputChar(c) => {
+                        app.branch_name_input.push(c);
+                        app.dirty = true;
+                    }
+                    Action::BranchInputBackspace => {
+                        app.branch_name_input.pop();
+                        app.dirty = true;
+                    }
+                    Action::BranchSelectIndex(idx) => {
+                        if idx < app.branches.len() {
+                            app.branch_selected = idx;
+                            app.confirm_branch_switch();
+                        }
+                    }
                     Action::ScrollUp => {
                         if app.mode == app::Mode::Help {
                             app.help_scroll_up();
+                        } else if app.mode == app::Mode::BranchList {
+                            app.branch_list_scroll_up();
                         } else {
                             app.scroll_up();
                         }
@@ -131,6 +156,8 @@ fn main() -> Result<()> {
                     Action::ScrollDown => {
                         if app.mode == app::Mode::Help {
                             app.help_scroll_down(ui::HELP_LINE_COUNT, visible_height);
+                        } else if app.mode == app::Mode::BranchList {
+                            app.branch_list_scroll_down(visible_height);
                         } else {
                             app.scroll_down(visible_height);
                         }

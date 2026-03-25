@@ -341,3 +341,115 @@ fn scroll_does_not_move_cursor() {
     app.scroll_up();
     assert_eq!(app.selected_index, 1);
 }
+
+// =============================================================================
+// Branch list
+// =============================================================================
+
+#[test]
+fn branch_list_move_up_stops_at_zero() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.branches = vec!["main".into(), "dev".into()];
+    app.branch_selected = 0;
+    app.branch_list_move_up();
+    assert_eq!(app.branch_selected, 0);
+}
+
+#[test]
+fn branch_list_move_down_increments() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.branches = vec!["main".into(), "dev".into(), "staging".into()];
+    app.branch_selected = 0;
+    app.branch_list_move_down();
+    assert_eq!(app.branch_selected, 1);
+}
+
+#[test]
+fn branch_list_move_down_stops_at_last() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.branches = vec!["main".into(), "dev".into()];
+    app.branch_selected = 1;
+    app.branch_list_move_down();
+    assert_eq!(app.branch_selected, 1);
+}
+
+#[test]
+fn close_branch_list_returns_to_normal() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.mode = Mode::BranchList;
+    app.branches = vec!["main".into()];
+    app.close_branch_list();
+    assert_eq!(app.mode, Mode::Normal);
+    assert!(app.branches.is_empty());
+}
+
+#[test]
+fn enter_branch_create_mode() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.mode = Mode::BranchList;
+    app.enter_branch_create();
+    assert_eq!(app.mode, Mode::BranchCreate);
+    assert!(app.branch_name_input.is_empty());
+}
+
+#[test]
+fn cancel_branch_create_returns_to_list() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.mode = Mode::BranchCreate;
+    app.branches = vec!["main".into(), "dev".into()];
+    app.branch_name_input = "feature/test".into();
+    app.cancel_branch_create();
+    assert_eq!(app.mode, Mode::BranchList);
+    assert!(app.branch_name_input.is_empty());
+}
+
+#[test]
+fn cancel_branch_create_returns_to_normal_when_no_branches() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.mode = Mode::BranchCreate;
+    app.branch_name_input = "feature/test".into();
+    app.cancel_branch_create();
+    assert_eq!(app.mode, Mode::Normal);
+    assert!(app.branch_name_input.is_empty());
+}
+
+#[test]
+fn confirm_branch_create_rejects_empty() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.mode = Mode::BranchCreate;
+    app.branch_name_input = "   ".into();
+    app.confirm_branch_create();
+    assert_eq!(app.mode, Mode::BranchCreate);
+    assert_eq!(app.status_message, "Empty branch name");
+}
+
+#[test]
+fn confirm_branch_switch_already_on_current() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.mode = Mode::BranchList;
+    app.branches = vec!["main".into(), "dev".into()];
+    app.branch_selected = 0; // "main" which matches repo.branch
+    app.confirm_branch_switch();
+    assert_eq!(app.mode, Mode::Normal);
+    assert!(app.status_message.contains("Already on"));
+}
+
+#[test]
+fn adjust_branch_scroll_cursor_below() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.branches = vec!["a".into(), "b".into(), "c".into(), "d".into(), "e".into()];
+    app.branch_selected = 4;
+    app.branch_scroll = 0;
+    app.adjust_branch_scroll(3);
+    assert_eq!(app.branch_scroll, 2);
+}
+
+#[test]
+fn adjust_branch_scroll_cursor_above() {
+    let mut app = App::with_repo(make_repo(vec![]));
+    app.branches = vec!["a".into(), "b".into(), "c".into()];
+    app.branch_selected = 0;
+    app.branch_scroll = 2;
+    app.adjust_branch_scroll(3);
+    assert_eq!(app.branch_scroll, 0);
+}

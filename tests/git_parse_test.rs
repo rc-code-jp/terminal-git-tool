@@ -1,4 +1,4 @@
-use pocogit::git::{parse_branch, parse_porcelain_output, FileStatus};
+use pocogit::git::{parse_branch, parse_branch_list, parse_porcelain_output, FileStatus};
 
 // =============================================================================
 // parse_branch
@@ -183,4 +183,56 @@ fn porcelain_short_lines_skipped() {
     let output = "## main\nXX\n M src/app.rs\n";
     let state = parse_porcelain_output(output, 0, 0);
     assert_eq!(state.files.len(), 1);
+}
+
+// =============================================================================
+// parse_branch_list
+// =============================================================================
+
+#[test]
+fn branch_list_single_branch() {
+    let output = "* main\n";
+    let (branches, current) = parse_branch_list(output);
+    assert_eq!(branches, vec!["main"]);
+    assert_eq!(current, 0);
+}
+
+#[test]
+fn branch_list_multiple_branches() {
+    let output = "  develop\n  feature/login\n* main\n  staging\n";
+    let (branches, current) = parse_branch_list(output);
+    assert_eq!(branches, vec!["develop", "feature/login", "main", "staging"]);
+    assert_eq!(current, 2);
+}
+
+#[test]
+fn branch_list_first_is_current() {
+    let output = "* alpha\n  beta\n  gamma\n";
+    let (branches, current) = parse_branch_list(output);
+    assert_eq!(branches, vec!["alpha", "beta", "gamma"]);
+    assert_eq!(current, 0);
+}
+
+#[test]
+fn branch_list_last_is_current() {
+    let output = "  alpha\n  beta\n* gamma\n";
+    let (branches, current) = parse_branch_list(output);
+    assert_eq!(branches, vec!["alpha", "beta", "gamma"]);
+    assert_eq!(current, 2);
+}
+
+#[test]
+fn branch_list_empty() {
+    let output = "";
+    let (branches, current) = parse_branch_list(output);
+    assert!(branches.is_empty());
+    assert_eq!(current, 0);
+}
+
+#[test]
+fn branch_list_ignores_blank_lines() {
+    let output = "\n* main\n\n  dev\n\n";
+    let (branches, current) = parse_branch_list(output);
+    assert_eq!(branches, vec!["main", "dev"]);
+    assert_eq!(current, 0);
 }

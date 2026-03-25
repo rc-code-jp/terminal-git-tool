@@ -268,6 +268,71 @@ pub fn pull() -> Result<String> {
     Ok(msg.lines().last().unwrap_or("Pulled").to_string())
 }
 
+pub fn get_branches() -> Result<(Vec<String>, usize)> {
+    let output = Command::new("git")
+        .args(["branch", "--list", "--no-color"])
+        .output()
+        .context("Failed to run git branch")?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_branch_list(&stdout))
+}
+
+pub fn parse_branch_list(stdout: &str) -> (Vec<String>, usize) {
+    let mut branches = Vec::new();
+    let mut current_index = 0;
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if let Some(name) = trimmed.strip_prefix("* ") {
+            current_index = branches.len();
+            branches.push(name.to_string());
+        } else {
+            branches.push(trimmed.to_string());
+        }
+    }
+    (branches, current_index)
+}
+
+pub fn checkout_branch(name: &str) -> Result<String> {
+    let output = Command::new("git")
+        .args(["checkout", name])
+        .output()
+        .context("Failed to run git checkout")?;
+    if !output.status.success() {
+        anyhow::bail!(
+            "git checkout failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Ok(stderr
+        .lines()
+        .next()
+        .unwrap_or("Switched branch")
+        .to_string())
+}
+
+pub fn create_and_checkout_branch(name: &str) -> Result<String> {
+    let output = Command::new("git")
+        .args(["checkout", "-b", name])
+        .output()
+        .context("Failed to run git checkout -b")?;
+    if !output.status.success() {
+        anyhow::bail!(
+            "git checkout -b failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Ok(stderr
+        .lines()
+        .next()
+        .unwrap_or("Created branch")
+        .to_string())
+}
+
 pub fn push() -> Result<String> {
     let output = Command::new("git")
         .args(["push", "origin", "HEAD"])
