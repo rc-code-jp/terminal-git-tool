@@ -31,6 +31,7 @@ fn make_repo(files: Vec<(&str, FileStatus)>) -> RepoState {
         unstaged_count,
         untracked_count,
         unpushed_count: 0,
+        unpulled_count: 0,
     }
 }
 
@@ -258,6 +259,7 @@ fn render_header_counts() {
         unstaged_count: 1,
         untracked_count: 1,
         unpushed_count: 2,
+        unpulled_count: 0,
     };
     let app = App::with_repo(repo);
     let mut click_areas = ClickAreas::new();

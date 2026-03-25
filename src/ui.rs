@@ -44,11 +44,15 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect, width: usize) {
     let m = app.repo.unstaged_count;
     let u = app.repo.untracked_count;
     let p = app.repo.unpushed_count;
+    let d = app.repo.unpulled_count;
 
     let header_text = if width >= 60 {
         let mut parts = format!("  {}  +{} ~{} ?{}", branch, s, m, u);
         if p > 0 {
             parts.push_str(&format!(" ↑{}", p));
+        }
+        if d > 0 {
+            parts.push_str(&format!(" ↓{}", d));
         }
         parts
     } else if width >= 40 {
@@ -56,11 +60,17 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect, width: usize) {
         if p > 0 {
             parts.push_str(&format!(" ↑{}", p));
         }
+        if d > 0 {
+            parts.push_str(&format!(" ↓{}", d));
+        }
         parts
     } else {
         let mut parts = format!("  {} +{}~{}", branch, s, m);
         if p > 0 {
             parts.push_str(&format!(" ↑{}", p));
+        }
+        if d > 0 {
+            parts.push_str(&format!(" ↓{}", d));
         }
         parts
     };
@@ -138,12 +148,12 @@ fn render_footer_normal(
     let status_area = Rect::new(area.x, area.y + 1, area.width, 1);
 
     // Buttons
-    let (stage_all_text, commit_text, push_text) = if width >= 60 {
-        (" [Stage All] ", " [Commit] ", " [Push] ")
+    let (stage_all_text, commit_text, pull_text, push_text) = if width >= 60 {
+        (" [Stage All] ", " [Commit] ", " [Pull] ", " [Push] ")
     } else if width >= 40 {
-        (" [StgAll] ", " [Cmt] ", " [Push] ")
+        (" [StgAll] ", " [Cmt] ", " [Pull] ", " [Push] ")
     } else {
-        (" [SA] ", " [C] ", " [P] ")
+        (" [SA] ", " [C] ", " [Pl] ", " [P] ")
     };
 
     let btn_style = Style::default()
@@ -183,6 +193,18 @@ fn render_footer_normal(
     click_areas.buttons.push((
         Rect::new(x_offset, area.y, p_len, 1),
         ButtonAction::Push,
+    ));
+    x_offset += p_len;
+
+    spans.push(Span::raw(" "));
+    x_offset += 1;
+
+    // Pull button
+    let pl_len = pull_text.len() as u16;
+    spans.push(Span::styled(pull_text, btn_style));
+    click_areas.buttons.push((
+        Rect::new(x_offset, area.y, pl_len, 1),
+        ButtonAction::Pull,
     ));
 
     let buttons_line = Paragraph::new(Line::from(spans));

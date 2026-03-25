@@ -35,6 +35,9 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
+    // Fetch remote once at startup to detect unpulled commits
+    git::fetch();
+
     // Setup terminal
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
@@ -100,6 +103,7 @@ fn main() -> Result<()> {
                     Action::EnterCommitMode => app.enter_commit_mode(),
                     Action::ConfirmCommit => app.confirm_commit(),
                     Action::CancelCommit => app.cancel_commit(),
+                    Action::Pull => app.pull(),
                     Action::Push => app.push(),
                     Action::Refresh => {
                         app.refresh();

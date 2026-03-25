@@ -23,6 +23,13 @@ pub struct RepoState {
     pub unstaged_count: usize,
     pub untracked_count: usize,
     pub unpushed_count: usize,
+    pub unpulled_count: usize,
+}
+
+pub fn fetch() {
+    let _ = Command::new("git")
+        .args(["fetch"])
+        .output();
 }
 
 pub fn is_git_repo() -> bool {
@@ -41,10 +48,11 @@ pub fn get_repo_state() -> Result<RepoState> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let unpushed_count = get_unpushed_count();
-    Ok(parse_porcelain_output(&stdout, unpushed_count))
+    let unpulled_count = get_unpulled_count();
+    Ok(parse_porcelain_output(&stdout, unpushed_count, unpulled_count))
 }
 
-pub fn parse_porcelain_output(stdout: &str, unpushed_count: usize) -> RepoState {
+pub fn parse_porcelain_output(stdout: &str, unpushed_count: usize, unpulled_count: usize) -> RepoState {
     let mut branch = String::from("HEAD");
     let mut files = Vec::new();
 
@@ -106,6 +114,7 @@ pub fn parse_porcelain_output(stdout: &str, unpushed_count: usize) -> RepoState 
         unstaged_count,
         untracked_count,
         unpushed_count,
+        unpulled_count,
     }
 }
 
@@ -119,6 +128,24 @@ pub fn parse_branch(line: &str) -> String {
     } else {
         rest.split_whitespace().next().unwrap_or("HEAD").to_string()
     }
+}
+
+fn get_unpulled_count() -> usize {
+    Command::new("git")
+        .args(["rev-list", "HEAD..@{upstream}", "--count"])
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                String::from_utf8_lossy(&o.stdout)
+                    .trim()
+                    .parse::<usize>()
+                    .ok()
+            } else {
+                None
+            }
+        })
+        .unwrap_or(0)
 }
 
 fn get_unpushed_count() -> usize {
@@ -218,6 +245,27 @@ pub fn commit(message: &str) -> Result<String> {
         .next()
         .unwrap_or("Committed")
         .to_string())
+}
+
+pub fn pull() -> Result<String> {
+    let output = Command::new("git")
+        .args(["pull"])
+        .output()
+        .context("Failed to run git pull")?;
+    if !output.status.success() {
+        anyhow::bail!(
+            "git pull failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let msg = if stderr.is_empty() {
+        stdout.to_string()
+    } else {
+        stderr.to_string()
+    };
+    Ok(msg.lines().last().unwrap_or("Pulled").to_string())
 }
 
 pub fn push() -> Result<String> {

@@ -15,6 +15,7 @@ pub enum Action {
     EnterCommitMode,
     ConfirmCommit,
     CancelCommit,
+    Pull,
     Push,
     Refresh,
     CommitInputChar(char),
@@ -34,6 +35,7 @@ pub struct ClickAreas {
 pub enum ButtonAction {
     StageAll,
     Commit,
+    Pull,
     Push,
     ConfirmCommit,
     CancelCommit,
@@ -84,6 +86,7 @@ fn map_normal_event(event: &Event, click_areas: &ClickAreas) -> Option<Action> {
                 KeyCode::Char('U') => Some(Action::UnstageAll),
                 KeyCode::Char('c') => Some(Action::EnterCommitMode),
                 KeyCode::Char('p') => Some(Action::Push),
+                KeyCode::Char('P') => Some(Action::Pull),
                 KeyCode::Char('r') => Some(Action::Refresh),
                 _ => None,
             }
@@ -102,6 +105,7 @@ fn map_normal_event(event: &Event, click_areas: &ClickAreas) -> Option<Action> {
                         return match btn {
                             ButtonAction::StageAll => Some(Action::StageAll),
                             ButtonAction::Commit => Some(Action::EnterCommitMode),
+                            ButtonAction::Pull => Some(Action::Pull),
                             ButtonAction::Push => Some(Action::Push),
                             _ => None,
                         };

@@ -28,6 +28,7 @@ fn make_repo(files: Vec<(&str, FileStatus)>) -> RepoState {
         unstaged_count,
         untracked_count,
         unpushed_count: 0,
+        unpulled_count: 0,
     }
 }
 

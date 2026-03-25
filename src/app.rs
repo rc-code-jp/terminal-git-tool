@@ -39,6 +39,7 @@ impl App {
             unstaged_count: 0,
             untracked_count: 0,
             unpushed_count: 0,
+            unpulled_count: 0,
         });
         Self {
             mode: Mode::Normal,
@@ -158,6 +159,21 @@ impl App {
         self.commit_message.clear();
         self.status_message.clear();
         self.dirty = true;
+    }
+
+    pub fn pull(&mut self) {
+        self.status_message = String::from("Pulling...");
+        self.dirty = true;
+        match git::pull() {
+            Ok(msg) => {
+                self.status_message = msg;
+                self.refresh();
+            }
+            Err(e) => {
+                self.status_message = format!("Error: {}", e);
+                self.dirty = true;
+            }
+        }
     }
 
     pub fn push(&mut self) {
