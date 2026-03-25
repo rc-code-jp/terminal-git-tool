@@ -6,16 +6,17 @@ mod ui;
 use std::io;
 use std::path::Path;
 use std::sync::mpsc;
+use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use notify::{RecursiveMode, Watcher};
-use ratatui::{Terminal, backend::CrosstermBackend};
+use ratatui::{backend::CrosstermBackend, Terminal};
 
 use app::App;
 use event::{Action, ClickAreas};
@@ -35,9 +36,6 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    // Fetch remote once at startup to detect unpulled commits
-    git::fetch();
-
     // Setup terminal
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
@@ -53,6 +51,11 @@ fn main() -> Result<()> {
 
     // Setup file system watcher
     let (fs_tx, fs_rx) = mpsc::channel();
+    let startup_refresh_tx = fs_tx.clone();
+    thread::spawn(move || {
+        git::fetch();
+        let _ = startup_refresh_tx.send(());
+    });
     let mut watcher = notify::recommended_watcher(move |_res| {
         let _ = fs_tx.send(());
     })

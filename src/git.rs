@@ -27,9 +27,7 @@ pub struct RepoState {
 }
 
 pub fn fetch() {
-    let _ = Command::new("git")
-        .args(["fetch"])
-        .output();
+    let _ = Command::new("git").args(["fetch"]).output();
 }
 
 pub fn is_git_repo() -> bool {
@@ -47,12 +45,19 @@ pub fn get_repo_state() -> Result<RepoState> {
         .context("Failed to run git status")?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let unpushed_count = get_unpushed_count();
-    let unpulled_count = get_unpulled_count();
-    Ok(parse_porcelain_output(&stdout, unpushed_count, unpulled_count))
+    let (unpushed_count, unpulled_count) = parse_upstream_counts(&stdout);
+    Ok(parse_porcelain_output(
+        &stdout,
+        unpushed_count,
+        unpulled_count,
+    ))
 }
 
-pub fn parse_porcelain_output(stdout: &str, unpushed_count: usize, unpulled_count: usize) -> RepoState {
+pub fn parse_porcelain_output(
+    stdout: &str,
+    unpushed_count: usize,
+    unpulled_count: usize,
+) -> RepoState {
     let mut branch = String::from("HEAD");
     let mut files = Vec::new();
 
@@ -130,40 +135,32 @@ pub fn parse_branch(line: &str) -> String {
     }
 }
 
-fn get_unpulled_count() -> usize {
-    Command::new("git")
-        .args(["rev-list", "HEAD..@{upstream}", "--count"])
-        .output()
-        .ok()
-        .and_then(|o| {
-            if o.status.success() {
-                String::from_utf8_lossy(&o.stdout)
-                    .trim()
-                    .parse::<usize>()
-                    .ok()
-            } else {
-                None
-            }
-        })
-        .unwrap_or(0)
-}
+fn parse_upstream_counts(stdout: &str) -> (usize, usize) {
+    let Some(branch_line) = stdout.lines().find(|line| line.starts_with("## ")) else {
+        return (0, 0);
+    };
 
-fn get_unpushed_count() -> usize {
-    Command::new("git")
-        .args(["rev-list", "@{upstream}..HEAD", "--count"])
-        .output()
-        .ok()
-        .and_then(|o| {
-            if o.status.success() {
-                String::from_utf8_lossy(&o.stdout)
-                    .trim()
-                    .parse::<usize>()
-                    .ok()
-            } else {
-                None
-            }
-        })
-        .unwrap_or(0)
+    let Some(start) = branch_line.find('[') else {
+        return (0, 0);
+    };
+    let Some(end) = branch_line[start..].find(']') else {
+        return (0, 0);
+    };
+
+    let detail = &branch_line[start + 1..start + end];
+    let mut ahead = 0;
+    let mut behind = 0;
+
+    for part in detail.split(',') {
+        let trimmed = part.trim();
+        if let Some(value) = trimmed.strip_prefix("ahead ") {
+            ahead = value.parse::<usize>().unwrap_or(0);
+        } else if let Some(value) = trimmed.strip_prefix("behind ") {
+            behind = value.parse::<usize>().unwrap_or(0);
+        }
+    }
+
+    (ahead, behind)
 }
 
 pub fn stage_file(path: &str) -> Result<()> {
