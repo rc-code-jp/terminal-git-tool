@@ -2,6 +2,10 @@
 
 狭いターミナルペイン向けの軽量 git TUI。status / stage / commit / push を素早く回せる。
 
+
+https://github.com/user-attachments/assets/e56bad2a-7ee1-4432-9e93-4a5c9e093ec9
+
+
 ## Install
 
 ### Homebrew (macOS)
