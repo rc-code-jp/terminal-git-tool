@@ -82,11 +82,7 @@ pub fn poll_event(timeout: Duration) -> anyhow::Result<Option<Event>> {
     }
 }
 
-pub fn map_event(
-    event: &Event,
-    mode: &Mode,
-    click_areas: &ClickAreas,
-) -> Option<Action> {
+pub fn map_event(event: &Event, mode: &Mode, click_areas: &ClickAreas) -> Option<Action> {
     match mode {
         Mode::Normal => map_normal_event(event, click_areas),
         Mode::CommitInput => map_commit_event(event, click_areas),
@@ -172,9 +168,7 @@ fn map_help_event(event: &Event) -> Option<Action> {
                 return Some(Action::Quit);
             }
             match code {
-                KeyCode::Char('q') | KeyCode::Esc | KeyCode::Char('?') => {
-                    Some(Action::CloseHelp)
-                }
+                KeyCode::Char('q') | KeyCode::Esc | KeyCode::Char('?') => Some(Action::CloseHelp),
                 KeyCode::Char('j') | KeyCode::Down => Some(Action::ScrollDown),
                 KeyCode::Char('k') | KeyCode::Up => Some(Action::ScrollUp),
                 _ => None,
@@ -272,12 +266,8 @@ fn map_branch_create_event(event: &Event, click_areas: &ClickAreas) -> Option<Ac
                         && row < rect.y + rect.height
                     {
                         return match btn {
-                            ButtonAction::ConfirmBranchCreate => {
-                                Some(Action::ConfirmBranchCreate)
-                            }
-                            ButtonAction::CancelBranchCreate => {
-                                Some(Action::CancelBranchCreate)
-                            }
+                            ButtonAction::ConfirmBranchCreate => Some(Action::ConfirmBranchCreate),
+                            ButtonAction::CancelBranchCreate => Some(Action::CancelBranchCreate),
                             _ => None,
                         };
                     }

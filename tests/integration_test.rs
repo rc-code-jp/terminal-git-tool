@@ -9,7 +9,8 @@ struct TempRepo {
 
 impl TempRepo {
     fn new(name: &str) -> Self {
-        let dir = std::env::temp_dir().join(format!("git-pocket-test-{}-{}", name, std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("git-pocket-test-{}-{}", name, std::process::id()));
         if dir.exists() {
             fs::remove_dir_all(&dir).unwrap();
         }
@@ -82,7 +83,10 @@ fn integration_parse_untracked_files() {
     let state = pocogit::git::parse_porcelain_output(&porcelain, 0, 0);
 
     assert_eq!(state.files.len(), 2);
-    assert!(state.files.iter().all(|f| f.status == pocogit::git::FileStatus::Untracked));
+    assert!(state
+        .files
+        .iter()
+        .all(|f| f.status == pocogit::git::FileStatus::Untracked));
     assert_eq!(state.untracked_count, 2);
 }
 
@@ -291,7 +295,10 @@ fn integration_stage_all() {
     let porcelain = repo.git_status_porcelain();
     let state = pocogit::git::parse_porcelain_output(&porcelain, 0, 0);
     assert!(
-        state.files.iter().all(|f| f.status == pocogit::git::FileStatus::Staged),
+        state
+            .files
+            .iter()
+            .all(|f| f.status == pocogit::git::FileStatus::Staged),
         "All files should be staged"
     );
     assert_eq!(state.staged_count, 3);
@@ -311,10 +318,7 @@ fn integration_branch_name_default() {
     let porcelain = repo.git_status_porcelain();
     let state = pocogit::git::parse_porcelain_output(&porcelain, 0, 0);
     // Default branch could be "main" or "master" depending on git config
-    assert!(
-        !state.branch.is_empty(),
-        "Branch name should not be empty"
-    );
+    assert!(!state.branch.is_empty(), "Branch name should not be empty");
 }
 
 #[test]

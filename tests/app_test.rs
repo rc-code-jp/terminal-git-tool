@@ -135,7 +135,7 @@ fn adjust_scroll_cursor_below_visible() {
     let mut app = App::with_repo(repo);
     app.selected_index = 4; // last item
     app.adjust_scroll(3); // visible height = 3
-    // list_offset should be 4 - 3 + 1 = 2
+                          // list_offset should be 4 - 3 + 1 = 2
     assert_eq!(app.list_offset, 2);
 }
 

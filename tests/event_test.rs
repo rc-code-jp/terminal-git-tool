@@ -68,7 +68,10 @@ fn normal_ctrl_c_quits() {
 fn normal_j_moves_down() {
     let areas = empty_click_areas();
     let ev = key_event(KeyCode::Char('j'));
-    assert_eq!(map_event(&ev, &Mode::Normal, &areas), Some(Action::MoveDown));
+    assert_eq!(
+        map_event(&ev, &Mode::Normal, &areas),
+        Some(Action::MoveDown)
+    );
 }
 
 #[test]
@@ -82,7 +85,10 @@ fn normal_k_moves_up() {
 fn normal_arrow_down() {
     let areas = empty_click_areas();
     let ev = key_event(KeyCode::Down);
-    assert_eq!(map_event(&ev, &Mode::Normal, &areas), Some(Action::MoveDown));
+    assert_eq!(
+        map_event(&ev, &Mode::Normal, &areas),
+        Some(Action::MoveDown)
+    );
 }
 
 #[test]
@@ -153,10 +159,7 @@ fn normal_p_pushes() {
 fn normal_r_refreshes() {
     let areas = empty_click_areas();
     let ev = key_event(KeyCode::Char('r'));
-    assert_eq!(
-        map_event(&ev, &Mode::Normal, &areas),
-        Some(Action::Refresh)
-    );
+    assert_eq!(map_event(&ev, &Mode::Normal, &areas), Some(Action::Refresh));
 }
 
 #[test]
@@ -238,10 +241,9 @@ fn commit_j_is_char_input_not_move() {
 #[test]
 fn mouse_click_stage_all_button() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(1, 10, 12, 1),
-        ButtonAction::StageAll,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(1, 10, 12, 1), ButtonAction::StageAll));
     let ev = mouse_click(5, 10); // within button rect
     assert_eq!(
         map_event(&ev, &Mode::Normal, &areas),
@@ -252,10 +254,9 @@ fn mouse_click_stage_all_button() {
 #[test]
 fn mouse_click_commit_button() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(14, 10, 10, 1),
-        ButtonAction::Commit,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(14, 10, 10, 1), ButtonAction::Commit));
     let ev = mouse_click(16, 10);
     assert_eq!(
         map_event(&ev, &Mode::Normal, &areas),
@@ -266,10 +267,9 @@ fn mouse_click_commit_button() {
 #[test]
 fn mouse_click_push_button() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(25, 10, 8, 1),
-        ButtonAction::Push,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(25, 10, 8, 1), ButtonAction::Push));
     let ev = mouse_click(28, 10);
     assert_eq!(map_event(&ev, &Mode::Normal, &areas), Some(Action::Push));
 }
@@ -277,10 +277,9 @@ fn mouse_click_push_button() {
 #[test]
 fn mouse_click_outside_buttons() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(1, 10, 12, 1),
-        ButtonAction::StageAll,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(1, 10, 12, 1), ButtonAction::StageAll));
     let ev = mouse_click(50, 10); // outside button
     assert_eq!(map_event(&ev, &Mode::Normal, &areas), None);
 }
@@ -321,10 +320,9 @@ fn mouse_click_file_row_first() {
 #[test]
 fn mouse_click_confirm_commit_button() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(1, 10, 10, 1),
-        ButtonAction::ConfirmCommit,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(1, 10, 10, 1), ButtonAction::ConfirmCommit));
     let ev = mouse_click(5, 10);
     assert_eq!(
         map_event(&ev, &Mode::CommitInput, &areas),
@@ -335,10 +333,9 @@ fn mouse_click_confirm_commit_button() {
 #[test]
 fn mouse_click_cancel_commit_button() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(12, 10, 10, 1),
-        ButtonAction::CancelCommit,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(12, 10, 10, 1), ButtonAction::CancelCommit));
     let ev = mouse_click(15, 10);
     assert_eq!(
         map_event(&ev, &Mode::CommitInput, &areas),
@@ -354,10 +351,9 @@ fn mouse_click_cancel_commit_button() {
 fn button_takes_priority_over_file_row() {
     let mut areas = ClickAreas::new();
     // Both occupy the same row
-    areas.buttons.push((
-        Rect::new(0, 5, 10, 1),
-        ButtonAction::StageAll,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(0, 5, 10, 1), ButtonAction::StageAll));
     areas.file_rows.push((Rect::new(0, 5, 80, 1), 0));
 
     let ev = mouse_click(5, 5);
@@ -394,7 +390,10 @@ fn mouse_scroll_down(column: u16, row: u16) -> Event {
 fn mouse_scroll_up_normal() {
     let areas = empty_click_areas();
     let ev = mouse_scroll_up(10, 5);
-    assert_eq!(map_event(&ev, &Mode::Normal, &areas), Some(Action::ScrollUp));
+    assert_eq!(
+        map_event(&ev, &Mode::Normal, &areas),
+        Some(Action::ScrollUp)
+    );
 }
 
 #[test]
@@ -621,10 +620,9 @@ fn branch_list_mouse_scroll() {
 fn header_branch_click_shows_branch_list() {
     let mut areas = ClickAreas::new();
     // Simulate branch name at (2, 0) with width 4 ("main")
-    areas.buttons.push((
-        Rect::new(2, 0, 4, 1),
-        ButtonAction::ShowBranchList,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(2, 0, 4, 1), ButtonAction::ShowBranchList));
     let ev = mouse_click(3, 0);
     assert_eq!(
         map_event(&ev, &Mode::Normal, &areas),
@@ -635,10 +633,9 @@ fn header_branch_click_shows_branch_list() {
 #[test]
 fn header_plus_button_enters_branch_create() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(20, 0, 4, 1),
-        ButtonAction::EnterBranchCreate,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(20, 0, 4, 1), ButtonAction::EnterBranchCreate));
     let ev = mouse_click(21, 0);
     assert_eq!(
         map_event(&ev, &Mode::Normal, &areas),
@@ -649,10 +646,9 @@ fn header_plus_button_enters_branch_create() {
 #[test]
 fn branch_list_new_button_click() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(1, 20, 7, 1),
-        ButtonAction::EnterBranchCreate,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(1, 20, 7, 1), ButtonAction::EnterBranchCreate));
     let ev = mouse_click(3, 20);
     assert_eq!(
         map_event(&ev, &Mode::BranchList, &areas),
@@ -663,10 +659,9 @@ fn branch_list_new_button_click() {
 #[test]
 fn branch_create_create_button_click() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(1, 20, 10, 1),
-        ButtonAction::ConfirmBranchCreate,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(1, 20, 10, 1), ButtonAction::ConfirmBranchCreate));
     let ev = mouse_click(5, 20);
     assert_eq!(
         map_event(&ev, &Mode::BranchCreate, &areas),
@@ -677,10 +672,9 @@ fn branch_create_create_button_click() {
 #[test]
 fn branch_create_cancel_button_click() {
     let mut areas = ClickAreas::new();
-    areas.buttons.push((
-        Rect::new(12, 20, 10, 1),
-        ButtonAction::CancelBranchCreate,
-    ));
+    areas
+        .buttons
+        .push((Rect::new(12, 20, 10, 1), ButtonAction::CancelBranchCreate));
     let ev = mouse_click(15, 20);
     assert_eq!(
         map_event(&ev, &Mode::BranchCreate, &areas),

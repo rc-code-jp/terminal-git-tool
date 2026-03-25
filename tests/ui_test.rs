@@ -1,8 +1,8 @@
-use pocogit::ui::truncate_path;
 use pocogit::app::{App, Mode};
 use pocogit::event::ClickAreas;
 use pocogit::git::{FileStatus, GitFile, RepoState};
-use ratatui::{Terminal, backend::TestBackend, buffer::Buffer};
+use pocogit::ui::truncate_path;
+use ratatui::{backend::TestBackend, buffer::Buffer, Terminal};
 
 fn make_repo(files: Vec<(&str, FileStatus)>) -> RepoState {
     let git_files: Vec<GitFile> = files
@@ -135,9 +135,21 @@ fn render_shows_file_with_status_symbol() {
     let row3 = buffer_line_to_string(&buf, 3);
     let row4 = buffer_line_to_string(&buf, 4);
 
-    assert!(row2.contains("+") && row2.contains("staged.rs"), "Row 2: '{}'", row2);
-    assert!(row3.contains("~") && row3.contains("modified.rs"), "Row 3: '{}'", row3);
-    assert!(row4.contains("?") && row4.contains("untracked.rs"), "Row 4: '{}'", row4);
+    assert!(
+        row2.contains("+") && row2.contains("staged.rs"),
+        "Row 2: '{}'",
+        row2
+    );
+    assert!(
+        row3.contains("~") && row3.contains("modified.rs"),
+        "Row 3: '{}'",
+        row3
+    );
+    assert!(
+        row4.contains("?") && row4.contains("untracked.rs"),
+        "Row 4: '{}'",
+        row4
+    );
 }
 
 #[test]
@@ -164,7 +176,11 @@ fn render_shows_selected_cursor() {
     let row3 = buffer_line_to_string(&buf, 3); // second file, selected
 
     assert!(!row2.contains(">"), "First row should not have cursor");
-    assert!(row3.contains(">"), "Second row should have cursor, got: '{}'", row3);
+    assert!(
+        row3.contains(">"),
+        "Second row should have cursor, got: '{}'",
+        row3
+    );
 }
 
 #[test]
@@ -212,7 +228,10 @@ fn render_commit_input_mode() {
     let buf = terminal.backend().buffer().clone();
     let all_text = buffer_all_to_string(&buf);
     assert!(all_text.contains("COMMIT"), "Should show COMMIT title");
-    assert!(all_text.contains("feat: test"), "Should show commit message");
+    assert!(
+        all_text.contains("feat: test"),
+        "Should show commit message"
+    );
 }
 
 #[test]
@@ -251,9 +270,18 @@ fn render_header_counts() {
     let repo = RepoState {
         branch: "develop".to_string(),
         files: vec![
-            GitFile { path: "a.rs".to_string(), status: FileStatus::Staged },
-            GitFile { path: "b.rs".to_string(), status: FileStatus::Modified },
-            GitFile { path: "c.rs".to_string(), status: FileStatus::Untracked },
+            GitFile {
+                path: "a.rs".to_string(),
+                status: FileStatus::Staged,
+            },
+            GitFile {
+                path: "b.rs".to_string(),
+                status: FileStatus::Modified,
+            },
+            GitFile {
+                path: "c.rs".to_string(),
+                status: FileStatus::Untracked,
+            },
         ],
         staged_count: 1,
         unstaged_count: 1,
@@ -300,7 +328,7 @@ fn render_narrow_width_buttons() {
 
     let buf = terminal.backend().buffer().clone();
     let footer = buffer_line_to_string(&buf, 8); // footer area
-    // Narrow buttons should be abbreviated
+                                                 // Narrow buttons should be abbreviated
     assert!(
         footer.contains("[SA]") || footer.contains("[C]") || footer.contains("[P]"),
         "Narrow width should show abbreviated buttons, got: '{}'",

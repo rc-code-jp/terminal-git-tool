@@ -20,7 +20,7 @@ pub fn render(frame: &mut Frame, app: &App, click_areas: &mut ClickAreas) {
 
     let chunks = Layout::vertical([
         Constraint::Length(2), // header
-        Constraint::Min(1),   // file list
+        Constraint::Min(1),    // file list
         Constraint::Length(2), // footer (buttons + status)
     ])
     .split(area);
@@ -51,7 +51,13 @@ pub fn render(frame: &mut Frame, app: &App, click_areas: &mut ClickAreas) {
     }
 }
 
-fn render_header(frame: &mut Frame, app: &App, area: Rect, width: usize, click_areas: &mut ClickAreas) {
+fn render_header(
+    frame: &mut Frame,
+    app: &App,
+    area: Rect,
+    width: usize,
+    click_areas: &mut ClickAreas,
+) {
     let branch = &app.repo.branch;
     let s = app.repo.staged_count;
     let m = app.repo.unstaged_count;
@@ -106,14 +112,8 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect, width: usize, click_a
     ));
 
     let header = Paragraph::new(Line::from(vec![
-        Span::styled(
-            plus_text,
-            Style::default().fg(Color::DarkGray),
-        ),
-        Span::styled(
-            header_text,
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
+        Span::styled(plus_text, Style::default().fg(Color::DarkGray)),
+        Span::styled(header_text, Style::default().add_modifier(Modifier::BOLD)),
     ]))
     .block(Block::default().borders(Borders::BOTTOM));
 
@@ -163,10 +163,9 @@ fn render_file_list(frame: &mut Frame, app: &App, area: Rect, click_areas: &mut 
 
         // Register click area
         let row_y = area.y + (i - start) as u16;
-        click_areas.file_rows.push((
-            Rect::new(area.x, row_y, area.width, 1),
-            i,
-        ));
+        click_areas
+            .file_rows
+            .push((Rect::new(area.x, row_y, area.width, 1), i));
     }
 
     let list = Paragraph::new(lines);
@@ -192,9 +191,7 @@ fn render_footer_normal(
         (" [SA] ", " [C] ", " [Pl] ", " [P] ")
     };
 
-    let btn_style = Style::default()
-        .fg(Color::White)
-        .bg(Color::DarkGray);
+    let btn_style = Style::default().fg(Color::White).bg(Color::DarkGray);
 
     let mut spans = Vec::new();
     let mut x_offset = area.x + 1;
@@ -214,10 +211,9 @@ fn render_footer_normal(
     // Commit button
     let c_len = commit_text.len() as u16;
     spans.push(Span::styled(commit_text, btn_style));
-    click_areas.buttons.push((
-        Rect::new(x_offset, area.y, c_len, 1),
-        ButtonAction::Commit,
-    ));
+    click_areas
+        .buttons
+        .push((Rect::new(x_offset, area.y, c_len, 1), ButtonAction::Commit));
     x_offset += c_len;
 
     spans.push(Span::raw(" "));
@@ -226,10 +222,9 @@ fn render_footer_normal(
     // Push button
     let p_len = push_text.len() as u16;
     spans.push(Span::styled(push_text, btn_style));
-    click_areas.buttons.push((
-        Rect::new(x_offset, area.y, p_len, 1),
-        ButtonAction::Push,
-    ));
+    click_areas
+        .buttons
+        .push((Rect::new(x_offset, area.y, p_len, 1), ButtonAction::Push));
     x_offset += p_len;
 
     spans.push(Span::raw(" "));
@@ -238,10 +233,9 @@ fn render_footer_normal(
     // Pull button
     let pl_len = pull_text.len() as u16;
     spans.push(Span::styled(pull_text, btn_style));
-    click_areas.buttons.push((
-        Rect::new(x_offset, area.y, pl_len, 1),
-        ButtonAction::Pull,
-    ));
+    click_areas
+        .buttons
+        .push((Rect::new(x_offset, area.y, pl_len, 1), ButtonAction::Pull));
 
     let buttons_line = Paragraph::new(Line::from(spans));
     frame.render_widget(buttons_line, button_area);
@@ -263,8 +257,7 @@ fn render_commit_input(frame: &mut Frame, app: &App, area: Rect) {
     ])
     .split(area);
 
-    let title = Paragraph::new("  COMMIT")
-        .style(Style::default().add_modifier(Modifier::BOLD));
+    let title = Paragraph::new("  COMMIT").style(Style::default().add_modifier(Modifier::BOLD));
     frame.render_widget(title, chunks[0]);
 
     let label = Paragraph::new("  msg:");
@@ -295,7 +288,10 @@ fn render_footer_commit(
     let mut x_offset = area.x + 1;
 
     let spans = vec![
-        Span::styled(commit_text, Style::default().fg(Color::Black).bg(Color::Green)),
+        Span::styled(
+            commit_text,
+            Style::default().fg(Color::Black).bg(Color::Green),
+        ),
         Span::raw(" "),
         Span::styled(cancel_text, btn_style),
     ];
@@ -313,8 +309,8 @@ fn render_footer_commit(
     let buttons_line = Paragraph::new(Line::from(spans));
     frame.render_widget(buttons_line, button_area);
 
-    let hint = Paragraph::new("  Enter: commit  Esc: cancel")
-        .style(Style::default().fg(Color::DarkGray));
+    let hint =
+        Paragraph::new("  Enter: commit  Esc: cancel").style(Style::default().fg(Color::DarkGray));
     frame.render_widget(hint, hint_area);
 }
 
@@ -382,8 +378,8 @@ fn render_help(frame: &mut Frame, area: Rect, scroll: usize) {
 }
 
 fn render_footer_help(frame: &mut Frame, area: Rect) {
-    let hint = Paragraph::new("  Press q, Esc, or ? to close")
-        .style(Style::default().fg(Color::DarkGray));
+    let hint =
+        Paragraph::new("  Press q, Esc, or ? to close").style(Style::default().fg(Color::DarkGray));
     frame.render_widget(hint, area);
 }
 
@@ -477,8 +473,7 @@ fn render_branch_create(frame: &mut Frame, app: &App, area: Rect) {
     ])
     .split(area);
 
-    let title = Paragraph::new("  NEW BRANCH")
-        .style(Style::default().add_modifier(Modifier::BOLD));
+    let title = Paragraph::new("  NEW BRANCH").style(Style::default().add_modifier(Modifier::BOLD));
     frame.render_widget(title, chunks[0]);
 
     let label = Paragraph::new("  name:");
@@ -503,7 +498,10 @@ fn render_footer_branch_create(frame: &mut Frame, area: Rect, click_areas: &mut 
     let mut x_offset = area.x + 1;
 
     let spans = vec![
-        Span::styled(create_text, Style::default().fg(Color::Black).bg(Color::Green)),
+        Span::styled(
+            create_text,
+            Style::default().fg(Color::Black).bg(Color::Green),
+        ),
         Span::raw(" "),
         Span::styled(cancel_text, btn_style),
     ];
@@ -521,8 +519,8 @@ fn render_footer_branch_create(frame: &mut Frame, area: Rect, click_areas: &mut 
     let buttons_line = Paragraph::new(Line::from(spans));
     frame.render_widget(buttons_line, button_area);
 
-    let hint = Paragraph::new("  Enter: create  Esc: cancel")
-        .style(Style::default().fg(Color::DarkGray));
+    let hint =
+        Paragraph::new("  Enter: create  Esc: cancel").style(Style::default().fg(Color::DarkGray));
     frame.render_widget(hint, hint_area);
 }
 
