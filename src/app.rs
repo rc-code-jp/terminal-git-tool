@@ -9,7 +9,7 @@ pub enum Mode {
     BranchCreate,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BusyAction {
     StageAll,
     UnstageAll,

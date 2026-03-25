@@ -383,6 +383,35 @@ fn render_busy_commit_footer_shows_loading_label() {
     assert!(status.contains("Committing..."), "status: '{}'", status);
 }
 
+#[test]
+fn render_busy_footer_keeps_button_positions() {
+    let repo = make_repo(vec![("a.rs", FileStatus::Modified)]);
+    let normal_app = App::with_repo(repo.clone());
+    let mut busy_app = App::with_repo(repo);
+    busy_app.begin_busy(BusyAction::Push);
+
+    let normal_footer = render_footer_line(&normal_app, 80, 10, 8);
+    let busy_footer = render_footer_line(&busy_app, 80, 10, 8);
+
+    assert_eq!(normal_footer.find("[Pull]"), busy_footer.find("[Pull]"));
+}
+
+#[test]
+fn render_busy_commit_footer_keeps_cancel_position() {
+    let repo = make_repo(vec![("a.rs", FileStatus::Staged)]);
+    let mut normal_app = App::with_repo(repo.clone());
+    normal_app.mode = Mode::CommitInput;
+
+    let mut busy_app = App::with_repo(repo);
+    busy_app.mode = Mode::CommitInput;
+    busy_app.begin_busy(BusyAction::Commit);
+
+    let normal_footer = render_footer_line(&normal_app, 80, 12, 10);
+    let busy_footer = render_footer_line(&busy_app, 80, 12, 10);
+
+    assert_eq!(normal_footer.find("[Cancel]"), busy_footer.find("[Cancel]"));
+}
+
 // =============================================================================
 // ヘルパー
 // =============================================================================
@@ -400,4 +429,19 @@ fn buffer_all_to_string(buf: &Buffer) -> String {
         .map(|row| buffer_line_to_string(buf, row))
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn render_footer_line(app: &App, width: u16, height: u16, row: u16) -> String {
+    let mut click_areas = ClickAreas::new();
+    let backend = TestBackend::new(width, height);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|frame| {
+            pocogit::ui::render(frame, app, &mut click_areas);
+        })
+        .unwrap();
+
+    let buf = terminal.backend().buffer().clone();
+    buffer_line_to_string(&buf, row)
 }

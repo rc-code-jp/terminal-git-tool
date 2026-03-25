@@ -197,7 +197,7 @@ fn render_footer_normal(
     let mut x_offset = area.x + 1;
 
     // Stage All button
-    let stage_all_text = busy_button_text(app, BusyAction::StageAll, stage_all_text);
+    let stage_all_text = button_text(app, BusyAction::StageAll, stage_all_text);
     let sa_len = stage_all_text.len() as u16;
     spans.push(Span::styled(stage_all_text, btn_style));
     click_areas.buttons.push((
@@ -210,7 +210,7 @@ fn render_footer_normal(
     x_offset += 1;
 
     // Commit button
-    let commit_text = busy_button_text(app, BusyAction::Commit, commit_text);
+    let commit_text = button_text(app, BusyAction::Commit, commit_text);
     let c_len = commit_text.len() as u16;
     spans.push(Span::styled(commit_text, btn_style));
     click_areas
@@ -222,7 +222,7 @@ fn render_footer_normal(
     x_offset += 1;
 
     // Push button
-    let push_text = busy_button_text(app, BusyAction::Push, push_text);
+    let push_text = button_text(app, BusyAction::Push, push_text);
     let p_len = push_text.len() as u16;
     spans.push(Span::styled(push_text, btn_style));
     click_areas
@@ -234,7 +234,7 @@ fn render_footer_normal(
     x_offset += 1;
 
     // Pull button
-    let pull_text = busy_button_text(app, BusyAction::Pull, pull_text);
+    let pull_text = button_text(app, BusyAction::Pull, pull_text);
     let pl_len = pull_text.len() as u16;
     spans.push(Span::styled(pull_text, btn_style));
     click_areas
@@ -280,7 +280,7 @@ fn render_footer_commit(
 
     let btn_style = button_style(app.is_busy(), false);
 
-    let commit_text = busy_button_text(app, BusyAction::Commit, " [Commit] ");
+    let commit_text = button_text(app, BusyAction::Commit, " [Commit] ");
     let cancel_text = " [Cancel] ";
     let c_len = commit_text.len() as u16;
     let ca_len = cancel_text.len() as u16;
@@ -452,7 +452,7 @@ fn render_footer_branch_list(
     let hint_area = Rect::new(area.x, area.y + 1, area.width, 1);
 
     let btn_style = button_style(app.is_busy(), false);
-    let new_text = busy_button_text(app, BusyAction::BranchCreate, " [New] ");
+    let new_text = button_text(app, BusyAction::BranchCreate, " [New] ");
     let new_len = new_text.len() as u16;
     let x_offset = area.x + 1;
 
@@ -505,7 +505,7 @@ fn render_footer_branch_create(
 
     let btn_style = button_style(app.is_busy(), false);
 
-    let create_text = busy_button_text(app, BusyAction::BranchCreate, " [Create] ");
+    let create_text = button_text(app, BusyAction::BranchCreate, " [Create] ");
     let cancel_text = " [Cancel] ";
     let cr_len = create_text.len() as u16;
     let ca_len = cancel_text.len() as u16;
@@ -550,21 +550,31 @@ fn button_style(is_busy: bool, is_primary: bool) -> Style {
     }
 }
 
-fn busy_button_text<'a>(app: &'a App, action: BusyAction, default: &'a str) -> &'a str {
-    if let Some(busy) = &app.busy {
-        if busy.action == action {
-            return match action {
-                BusyAction::StageAll => " [Staging...] ",
-                BusyAction::UnstageAll => " [Unstaging...] ",
-                BusyAction::Commit => " [Committing...] ",
-                BusyAction::Pull => " [Pulling...] ",
-                BusyAction::Push => " [Pushing...] ",
-                BusyAction::BranchSwitch => " [Switching...] ",
-                BusyAction::BranchCreate => " [Creating...] ",
-            };
-        }
+fn busy_label(action: BusyAction) -> &'static str {
+    match action {
+        BusyAction::StageAll => " [Staging...] ",
+        BusyAction::UnstageAll => " [Unstaging...] ",
+        BusyAction::Commit => " [Committing...] ",
+        BusyAction::Pull => " [Pulling...] ",
+        BusyAction::Push => " [Pushing...] ",
+        BusyAction::BranchSwitch => " [Switching...] ",
+        BusyAction::BranchCreate => " [Creating...] ",
     }
-    default
+}
+
+fn button_text(app: &App, action: BusyAction, default: &str) -> String {
+    let active = if let Some(busy) = &app.busy {
+        if busy.action == action {
+            busy_label(action)
+        } else {
+            default
+        }
+    } else {
+        default
+    };
+
+    let width = default.len().max(busy_label(action).len());
+    format!("{active:<width$}")
 }
 
 fn render_status_line(frame: &mut Frame, area: Rect, message: &str, is_busy: bool) {
