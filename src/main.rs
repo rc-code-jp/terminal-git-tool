@@ -121,8 +121,20 @@ fn main() -> Result<()> {
                         app.dirty = true;
                     }
                     Action::Resize => app.dirty = true,
-                    Action::ScrollUp => app.scroll_up(),
-                    Action::ScrollDown => app.scroll_down(visible_height),
+                    Action::ScrollUp => {
+                        if app.mode == app::Mode::Help {
+                            app.help_scroll_up();
+                        } else {
+                            app.scroll_up();
+                        }
+                    }
+                    Action::ScrollDown => {
+                        if app.mode == app::Mode::Help {
+                            app.help_scroll_down(ui::HELP_LINE_COUNT, visible_height);
+                        } else {
+                            app.scroll_down(visible_height);
+                        }
+                    }
                     Action::SelectIndex(idx) => {
                         if idx < app.repo.files.len() {
                             app.selected_index = idx;

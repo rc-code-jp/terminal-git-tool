@@ -148,9 +148,16 @@ fn map_help_event(event: &Event) -> Option<Action> {
                 KeyCode::Char('q') | KeyCode::Esc | KeyCode::Char('?') => {
                     Some(Action::CloseHelp)
                 }
+                KeyCode::Char('j') | KeyCode::Down => Some(Action::ScrollDown),
+                KeyCode::Char('k') | KeyCode::Up => Some(Action::ScrollUp),
                 _ => None,
             }
         }
+        Event::Mouse(m) => match m.kind {
+            MouseEventKind::ScrollUp => Some(Action::ScrollUp),
+            MouseEventKind::ScrollDown => Some(Action::ScrollDown),
+            _ => None,
+        },
         Event::Resize(_, _) => Some(Action::Resize),
         _ => None,
     }

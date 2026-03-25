@@ -12,6 +12,7 @@ pub struct App {
     pub repo: RepoState,
     pub selected_index: usize,
     pub list_offset: usize,
+    pub help_scroll: usize,
     pub commit_message: String,
     pub status_message: String,
     pub should_quit: bool,
@@ -25,6 +26,7 @@ impl App {
             repo,
             selected_index: 0,
             list_offset: 0,
+            help_scroll: 0,
             commit_message: String::new(),
             status_message: String::new(),
             should_quit: false,
@@ -47,6 +49,7 @@ impl App {
             repo,
             selected_index: 0,
             list_offset: 0,
+            help_scroll: 0,
             commit_message: String::new(),
             status_message: String::new(),
             should_quit: false,
@@ -194,12 +197,28 @@ impl App {
 
     pub fn show_help(&mut self) {
         self.mode = Mode::Help;
+        self.help_scroll = 0;
         self.dirty = true;
     }
 
     pub fn close_help(&mut self) {
         self.mode = Mode::Normal;
         self.dirty = true;
+    }
+
+    pub fn help_scroll_up(&mut self) {
+        if self.help_scroll > 0 {
+            self.help_scroll -= 1;
+            self.dirty = true;
+        }
+    }
+
+    pub fn help_scroll_down(&mut self, total_lines: usize, visible_height: usize) {
+        let max_offset = total_lines.saturating_sub(visible_height);
+        if self.help_scroll < max_offset {
+            self.help_scroll += 1;
+            self.dirty = true;
+        }
     }
 
     pub fn scroll_up(&mut self) {

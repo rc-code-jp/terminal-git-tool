@@ -36,7 +36,7 @@ pub fn render(frame: &mut Frame, app: &App, click_areas: &mut ClickAreas) {
             render_footer_commit(frame, app, chunks[2], width, click_areas);
         }
         Mode::Help => {
-            render_help(frame, chunks[1]);
+            render_help(frame, chunks[1], app.help_scroll);
             render_footer_help(frame, chunks[2]);
         }
     }
@@ -286,7 +286,9 @@ fn render_footer_commit(
     frame.render_widget(hint, hint_area);
 }
 
-fn render_help(frame: &mut Frame, area: Rect) {
+pub const HELP_LINE_COUNT: usize = 13;
+
+fn render_help(frame: &mut Frame, area: Rect, scroll: usize) {
     let help_lines = vec![
         Line::from(Span::styled(
             "  HELP",
@@ -339,7 +341,7 @@ fn render_help(frame: &mut Frame, area: Rect) {
         ]),
     ];
 
-    let help = Paragraph::new(help_lines);
+    let help = Paragraph::new(help_lines).scroll((scroll as u16, 0));
     frame.render_widget(help, area);
 }
 
