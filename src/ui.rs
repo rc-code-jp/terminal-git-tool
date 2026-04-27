@@ -66,7 +66,7 @@ fn render_header(
     let d = app.repo.unpulled_count;
 
     let header_text = if width >= 60 {
-        let mut parts = format!("  {}  +{} ~{} ?{}", branch, s, m, u);
+        let mut parts = format!("{} +{} ~{} ?{}", branch, s, m, u);
         if p > 0 {
             parts.push_str(&format!(" ↑{}", p));
         }
@@ -75,7 +75,7 @@ fn render_header(
         }
         parts
     } else if width >= 40 {
-        let mut parts = format!("  {} +{}~{}?{}", branch, s, m, u);
+        let mut parts = format!("{} +{}~{}?{}", branch, s, m, u);
         if p > 0 {
             parts.push_str(&format!(" ↑{}", p));
         }
@@ -84,7 +84,7 @@ fn render_header(
         }
         parts
     } else {
-        let mut parts = format!("  {} +{}~{}", branch, s, m);
+        let mut parts = format!("{} +{}~{}", branch, s, m);
         if p > 0 {
             parts.push_str(&format!(" ↑{}", p));
         }
@@ -94,27 +94,18 @@ fn render_header(
         parts
     };
 
-    // Register [+] button click area at the start
-    let plus_text = " [+]";
-    let plus_x = area.x;
-    let plus_width = plus_text.len() as u16;
-    click_areas.buttons.push((
-        Rect::new(plus_x, area.y, plus_width, 1),
-        ButtonAction::EnterBranchCreate,
-    ));
-
-    // Register branch name click area (after "[+]" + "  " prefix in header_text)
-    let branch_x = area.x + plus_width + 2; // "[+]" then "  " then branch name
+    // ヘッダーのブランチ名クリックでブランチ一覧を開く
+    let branch_x = area.x;
     let branch_width = branch.len() as u16;
     click_areas.buttons.push((
         Rect::new(branch_x, area.y, branch_width, 1),
         ButtonAction::ShowBranchList,
     ));
 
-    let header = Paragraph::new(Line::from(vec![
-        Span::styled(plus_text, Style::default().fg(Color::DarkGray)),
-        Span::styled(header_text, Style::default().add_modifier(Modifier::BOLD)),
-    ]))
+    let header = Paragraph::new(Line::from(vec![Span::styled(
+        header_text,
+        Style::default().add_modifier(Modifier::BOLD),
+    )]))
     .block(Block::default().borders(Borders::BOTTOM));
 
     frame.render_widget(header, area);
@@ -182,19 +173,19 @@ fn render_footer_normal(
     let button_area = Rect::new(area.x, area.y, area.width, 1);
     let status_area = Rect::new(area.x, area.y + 1, area.width, 1);
 
-    // Buttons
+    // ボタン間だけに余白を入れる
     let (stage_all_text, commit_text, pull_text, push_text) = if width >= 60 {
-        (" [Stage All] ", " [Commit] ", " [Pull] ", " [Push] ")
+        ("[Stage All]", "[Commit]", "[Pull]", "[Push]")
     } else if width >= 40 {
-        (" [StgAll] ", " [Cmt] ", " [Pull] ", " [Push] ")
+        ("[StgAll]", "[Cmt]", "[Pull]", "[Push]")
     } else {
-        (" [SA] ", " [C] ", " [Pl] ", " [P] ")
+        ("[SA]", "[C]", "[Pl]", "[P]")
     };
 
     let btn_style = button_style(app.is_busy(), false);
 
     let mut spans = Vec::new();
-    let mut x_offset = area.x + 1;
+    let mut x_offset = area.x;
 
     // Stage All button
     let stage_all_text = button_text(app, BusyAction::StageAll, stage_all_text);
@@ -280,12 +271,12 @@ fn render_footer_commit(
 
     let btn_style = button_style(app.is_busy(), false);
 
-    let commit_text = button_text(app, BusyAction::Commit, " [Commit] ");
-    let cancel_text = " [Cancel] ";
+    let commit_text = button_text(app, BusyAction::Commit, "[Commit]");
+    let cancel_text = "[Cancel]";
     let c_len = commit_text.len() as u16;
     let ca_len = cancel_text.len() as u16;
 
-    let mut x_offset = area.x + 1;
+    let mut x_offset = area.x;
 
     let spans = vec![
         Span::styled(commit_text, button_style(app.is_busy(), true)),
@@ -309,7 +300,7 @@ fn render_footer_commit(
     render_hint_or_status(
         frame,
         hint_area,
-        "  Enter: commit  Esc: cancel",
+        "Enter: commit  Esc: cancel",
         &app.status_message,
         app.is_busy(),
     );
@@ -452,9 +443,9 @@ fn render_footer_branch_list(
     let hint_area = Rect::new(area.x, area.y + 1, area.width, 1);
 
     let btn_style = button_style(app.is_busy(), false);
-    let new_text = button_text(app, BusyAction::BranchCreate, " [New] ");
+    let new_text = button_text(app, BusyAction::BranchCreate, "[New]");
     let new_len = new_text.len() as u16;
-    let x_offset = area.x + 1;
+    let x_offset = area.x;
 
     let spans = vec![Span::styled(new_text, btn_style)];
     click_areas.buttons.push((
@@ -468,7 +459,7 @@ fn render_footer_branch_list(
     render_hint_or_status(
         frame,
         hint_area,
-        "  Enter: switch  n: new branch  Esc: close",
+        "Enter: switch  n: new branch  Esc: close",
         &app.status_message,
         app.is_busy(),
     );
@@ -505,12 +496,12 @@ fn render_footer_branch_create(
 
     let btn_style = button_style(app.is_busy(), false);
 
-    let create_text = button_text(app, BusyAction::BranchCreate, " [Create] ");
-    let cancel_text = " [Cancel] ";
+    let create_text = button_text(app, BusyAction::BranchCreate, "[Create]");
+    let cancel_text = "[Cancel]";
     let cr_len = create_text.len() as u16;
     let ca_len = cancel_text.len() as u16;
 
-    let mut x_offset = area.x + 1;
+    let mut x_offset = area.x;
 
     let spans = vec![
         Span::styled(create_text, button_style(app.is_busy(), true)),
@@ -534,7 +525,7 @@ fn render_footer_branch_create(
     render_hint_or_status(
         frame,
         hint_area,
-        "  Enter: create  Esc: cancel",
+        "Enter: create  Esc: cancel",
         &app.status_message,
         app.is_busy(),
     );
@@ -552,13 +543,13 @@ fn button_style(is_busy: bool, is_primary: bool) -> Style {
 
 fn busy_label(action: BusyAction) -> &'static str {
     match action {
-        BusyAction::StageAll => " [Staging...] ",
-        BusyAction::UnstageAll => " [Unstaging...] ",
-        BusyAction::Commit => " [Committing...] ",
-        BusyAction::Pull => " [Pulling...] ",
-        BusyAction::Push => " [Pushing...] ",
-        BusyAction::BranchSwitch => " [Switching...] ",
-        BusyAction::BranchCreate => " [Creating...] ",
+        BusyAction::StageAll => "[Staging...]",
+        BusyAction::UnstageAll => "[Unstaging...]",
+        BusyAction::Commit => "[Committing...]",
+        BusyAction::Pull => "[Pulling...]",
+        BusyAction::Push => "[Pushing...]",
+        BusyAction::BranchSwitch => "[Switching...]",
+        BusyAction::BranchCreate => "[Creating...]",
     }
 }
 
@@ -582,7 +573,7 @@ fn render_status_line(frame: &mut Frame, area: Rect, message: &str, is_busy: boo
         return;
     }
     let color = if is_busy { Color::Yellow } else { Color::Cyan };
-    let status = Paragraph::new(format!("  {}", message)).style(Style::default().fg(color));
+    let status = Paragraph::new(message.to_string()).style(Style::default().fg(color));
     frame.render_widget(status, area);
 }
 

@@ -1,5 +1,5 @@
 use pocogit::app::{App, BusyAction, Mode};
-use pocogit::event::ClickAreas;
+use pocogit::event::{ButtonAction, ClickAreas};
 use pocogit::git::{FileStatus, GitFile, RepoState};
 use pocogit::ui::truncate_path;
 use ratatui::{backend::TestBackend, buffer::Buffer, Terminal};
@@ -107,6 +107,55 @@ fn render_shows_branch_name() {
         header_line.contains("main"),
         "Header should contain branch name 'main', got: '{}'",
         header_line
+    );
+}
+
+#[test]
+fn render_header_does_not_show_plus_button() {
+    let repo = make_repo(vec![("a.rs", FileStatus::Modified)]);
+    let app = App::with_repo(repo);
+    let mut click_areas = ClickAreas::new();
+
+    let backend = TestBackend::new(80, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|frame| {
+            pocogit::ui::render(frame, &app, &mut click_areas);
+        })
+        .unwrap();
+
+    let buf = terminal.backend().buffer().clone();
+    let header_line = buffer_line_to_string(&buf, 0);
+
+    assert!(
+        !header_line.contains("[+]"),
+        "Header should not contain plus button, got: '{}'",
+        header_line
+    );
+    assert!(
+        header_line.starts_with("main "),
+        "Header should start with branch name, got: '{}'",
+        header_line
+    );
+    assert!(
+        click_areas
+            .buttons
+            .iter()
+            .any(|(_, action)| matches!(action, ButtonAction::ShowBranchList)),
+        "Header should keep branch list click area"
+    );
+    assert!(
+        click_areas.buttons.iter().any(|(rect, action)| {
+            rect.x == 0 && rect.y == 0 && matches!(action, ButtonAction::ShowBranchList)
+        }),
+        "Header branch click area should start at the left edge"
+    );
+    assert!(
+        !click_areas.buttons.iter().any(|(rect, action)| {
+            rect.y == 0 && matches!(action, ButtonAction::EnterBranchCreate)
+        }),
+        "Header should not register branch create button"
     );
 }
 
@@ -381,6 +430,20 @@ fn render_busy_commit_footer_shows_loading_label() {
     let status = buffer_line_to_string(&buf, 11);
     assert!(footer.contains("[Committing...]"), "footer: '{}'", footer);
     assert!(status.contains("Committing..."), "status: '{}'", status);
+}
+
+#[test]
+fn render_footer_buttons_start_without_leading_padding() {
+    let repo = make_repo(vec![("a.rs", FileStatus::Modified)]);
+    let app = App::with_repo(repo);
+
+    let footer = render_footer_line(&app, 80, 10, 8);
+
+    assert!(
+        footer.starts_with("[Stage All]"),
+        "Footer buttons should start at the left edge, got: '{}'",
+        footer
+    );
 }
 
 #[test]

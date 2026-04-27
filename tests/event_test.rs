@@ -619,27 +619,14 @@ fn branch_list_mouse_scroll() {
 #[test]
 fn header_branch_click_shows_branch_list() {
     let mut areas = ClickAreas::new();
-    // Simulate branch name at (2, 0) with width 4 ("main")
+    // ブランチ名がヘッダー左端にある想定
     areas
         .buttons
-        .push((Rect::new(2, 0, 4, 1), ButtonAction::ShowBranchList));
-    let ev = mouse_click(3, 0);
+        .push((Rect::new(0, 0, 4, 1), ButtonAction::ShowBranchList));
+    let ev = mouse_click(1, 0);
     assert_eq!(
         map_event(&ev, &Mode::Normal, &areas),
         Some(Action::ShowBranchList)
-    );
-}
-
-#[test]
-fn header_plus_button_enters_branch_create() {
-    let mut areas = ClickAreas::new();
-    areas
-        .buttons
-        .push((Rect::new(20, 0, 4, 1), ButtonAction::EnterBranchCreate));
-    let ev = mouse_click(21, 0);
-    assert_eq!(
-        map_event(&ev, &Mode::Normal, &areas),
-        Some(Action::EnterBranchCreate)
     );
 }
 
