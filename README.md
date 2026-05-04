@@ -8,10 +8,16 @@ https://github.com/user-attachments/assets/e56bad2a-7ee1-4432-9e93-4a5c9e093ec9
 
 ## Install
 
-### Homebrew (macOS)
+### Nix
 
 ```
-brew install rc-code-jp/tap/pocogit
+nix profile install github:rc-code-jp/pocogit#pocogit
+```
+
+一時実行する場合は以下を使う。
+
+```
+nix run github:rc-code-jp/pocogit#pocogit
 ```
 
 ### Cargo
@@ -22,10 +28,10 @@ cargo install --path .
 
 ## Update
 
-### Homebrew
+### Nix
 
 ```
-brew upgrade pocogit
+nix profile upgrade pocogit
 ```
 
 ### Cargo
