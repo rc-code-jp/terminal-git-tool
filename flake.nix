@@ -37,10 +37,8 @@
             ];
 
             buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (
-              with pkgs.darwin.apple_sdk_15.frameworks;
               [
-                CoreFoundation
-                CoreServices
+                pkgs.apple-sdk_15
               ]
             );
 
