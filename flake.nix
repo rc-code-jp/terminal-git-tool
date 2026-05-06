@@ -36,6 +36,14 @@
               pkgs.makeWrapper
             ];
 
+            buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (
+              with pkgs.darwin.apple_sdk_15.frameworks;
+              [
+                CoreFoundation
+                CoreServices
+              ]
+            );
+
             postInstall = ''
               wrapProgram "$out/bin/pocogit" \
                 --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.git ]}
